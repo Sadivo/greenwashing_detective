@@ -1,0 +1,615 @@
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #208080;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --muted: #64748b;
+            --bg-light: #f8fafc;
+            --bg-white: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, #1a6666 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            opacity: 0.95;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* 第一層：篩選區 */
+        .filter-section {
+            background: var(--bg-white);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(32, 128, 128, 0.1);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            align-self: flex-end;
+        }
+
+        .btn:hover {
+            background: #1a6666;
+            box-shadow: 0 4px 12px rgba(32, 128, 128, 0.3);
+        }
+
+        /* 第二層：快覽卡片 */
+        .companies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .company-card {
+            background: var(--bg-white);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--border-color);
+        }
+
+        .company-card:hover {
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .company-card.low {
+            border-left-color: var(--success);
+        }
+
+        .company-card.medium {
+            border-left-color: var(--warning);
+        }
+
+        .company-card.high {
+            border-left-color: var(--danger);
+        }
+
+        .company-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .risk-score-big {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .risk-score-number {
+            font-size: 3rem;
+            font-weight: 700;
+            min-width: 100px;
+        }
+
+        .company-card.low .risk-score-number {
+            color: var(--success);
+        }
+
+        .company-card.medium .risk-score-number {
+            color: var(--warning);
+        }
+
+        .company-card.high .risk-score-number {
+            color: var(--danger);
+        }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .risk-badge.low {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success);
+        }
+
+        .risk-badge.medium {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .risk-badge.high {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        /* 詳細視圖 */
+        .detail-view {
+            display: none;
+            background: var(--bg-white);
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .detail-view.active {
+            display: block;
+        }
+
+        .detail-view-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .detail-view-header h2 {
+            font-size: 1.8rem;
+        }
+
+        .close-detail {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .close-detail:hover {
+            color: var(--text-primary);
+        }
+
+        /* 第三層：ESG分數 */
+        .esg-scores-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .esg-score-card {
+            background: linear-gradient(135deg, rgba(32, 128, 128, 0.05) 0%, rgba(32, 128, 128, 0.1) 100%);
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .esg-score-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .esg-letter {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .esg-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .esg-score {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* 分析板塊 */
+        .analysis-section {
+            background: var(--bg-white);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary);
+            display: inline-block;
+        }
+
+        /* 第四、五層：文本對比表 */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+
+        .comparison-table th {
+            background: var(--bg-light);
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+        }
+
+        .comparison-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .comparison-table tbody tr:hover {
+            background: rgba(32, 128, 128, 0.02);
+        }
+
+        .risk-label {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .risk-label.low {
+            background: rgba(212, 172, 13, 0.1);
+            color: #d4ac0d; /* Dark yellow */
+        }
+
+        .risk-label.medium {
+            background: rgba(255, 165, 0, 0.1);
+            color: orange;
+        }
+
+        .risk-label.high {
+            background: rgba(255, 0, 0, 0.1);
+            color: red;
+        }
+        
+        .risk-label.no {
+            background: rgba(0, 128, 0, 0.1);
+            color: green;
+        }
+
+        /* 第六層：特徵重要度 */
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+
+        .feature-label {
+            min-width: 200px;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .feature-bar {
+            flex: 1;
+            background: var(--bg-light);
+            height: 28px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .feature-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #1a6666);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 0.75rem;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* 第六層：SASB 權重圖 */
+        .sasb-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            margin-top: 1.5rem;
+        }
+
+        .sasb-item {
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 60px;
+        }
+
+        .sasb-item.weight-2 {
+            background: var(--primary);
+            color: white;
+            font-weight: 700;
+            border-color: var(--primary);
+            box-shadow: 0 4px 6px rgba(32, 128, 128, 0.2);
+            transform: scale(1.05);
+            z-index: 1;
+        }
+
+        .sasb-item.weight-1 {
+            opacity: 0.7;
+        }
+
+        /* 第七層：詞雲 */
+        .wordcloud-container {
+            background: var(--bg-white);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wordcloud {
+            text-align: center;
+            line-height: 2;
+        }
+
+        .word {
+            display: inline-block;
+            margin: 0 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            background: rgba(32, 128, 128, 0.1);
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .word:hover {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .word.high {
+            font-size: 1.8rem;
+        }
+
+        .word.medium {
+            font-size: 1.4rem;
+        }
+
+        .word.low {
+            font-size: 1rem;
+        }
+
+        /* 第八層：資料來源 */
+        .source-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .source-card {
+            background: linear-gradient(135deg, rgba(32, 128, 128, 0.05) 0%, rgba(32, 128, 128, 0.1) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .source-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .source-list {
+            list-style: none;
+            font-size: 0.9rem;
+        }
+
+        .source-list li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .source-list li:before {
+            content: "✓";
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        /* 響應式 */
+        @media (max-width: 1024px) {
+            .esg-scores-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .companies-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .comparison-table td {
+                max-width: 120px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+
+            .comparison-table {
+                font-size: 0.75rem;
+            }
+
+            .comparison-table td {
+                padding: 0.5rem;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* 初始提示區域 */
+        .initial-prompt {
+            background: var(--bg-white);
+            border-radius: 8px;
+            padding: 3rem 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+
+        .prompt-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .prompt-gif {
+            max-width: 300px;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        .prompt-text {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* 分頁控制 */
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            background: var(--bg-white);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
