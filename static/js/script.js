@@ -5,7 +5,7 @@ const companiesData = [
         name: '台積電',
         stockId: '2330',
         industry: '半導體業',
-        year: 2025,
+        year: 2024,
         greenwashingScore: 28,
         eScore: 32,
         sScore: 25,
@@ -21,7 +21,7 @@ const companiesData = [
         name: '聯發科',
         stockId: '2454',
         industry: '半導體業',
-        year: 2025,
+        year: 2024,
         greenwashingScore: 52,
         eScore: 58,
         sScore: 48,
@@ -37,7 +37,7 @@ const companiesData = [
         name: '中石化',
         stockId: '1314',
         industry: '油電燃氣業',
-        year: 2025,
+        year: 2024,
         greenwashingScore: 78,
         eScore: 85,
         sScore: 72,
@@ -75,14 +75,8 @@ async function init() {
 // --- 讀取 JSON 的函式 ---
 async function loadSasbData() {
     try {
-        // 自動檢測路徑：如果是 file:// 協議則使用相對路徑，否則使用絕對路徑
-        const isFileProtocol = window.location.protocol === 'file:';
-        const jsonPath = isFileProtocol 
-            ? '../static/data/SASB_weightMap.json' 
-            : '/static/data/SASB_weightMap.json';
-        
-        // 發送請求讀取 json 檔案
-        const response = await fetch(jsonPath);
+        // 發送請求讀取同目錄下的 json 檔案
+        const response = await fetch('../static/data/SASB_weightMap.json');
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -99,7 +93,6 @@ async function loadSasbData() {
 
     } catch (error) {
         console.error("載入 SASB_weightMap.json 失敗:", error);
-        console.error("嘗試的路徑:", window.location.protocol === 'file:' ? '../static/data/SASB_weightMap.json' : '/static/data/SASB_weightMap.json');
         alert("無法讀取 SASB 設定檔，請確認是否透過 Local Server執行。");
     }
 }
