@@ -178,11 +178,18 @@ function generateWordcloud(company) {
 
     // Error handling if stockId or year is missing
     if (!company.stockId || !company.year) {
+        console.warn('generateWordcloud: Missing stockId or year', company);
         wordcloudArea.innerHTML = '<div style="padding:1rem; color: #666;">無法顯示文字雲：資料缺漏 (StockID 或 Year)</div>';
         return;
     }
 
-    const imgPath = `/static/images/${company.stockId}_${company.year}_word_cloud.png`;
+    // Trim just in case of whitespace
+    const stockId = String(company.stockId).trim();
+    const year = String(company.year).trim();
+
+    // Construct path
+    const imgPath = `/static/images/${stockId}_${year}_word_cloud.png`;
+    console.log(`[WordCloud] Attempting to load: ${imgPath}`, { stockId, year });
 
     const img = document.createElement('img');
     img.src = imgPath;
@@ -192,16 +199,19 @@ function generateWordcloud(company) {
     img.style.display = 'block';
     img.style.margin = '0 auto';
 
-    // Simple error handling for image 404
+    // Success handler
+    img.onload = function () {
+        console.log(`[WordCloud] Successfully loaded: ${imgPath}`);
+    };
+
+    // Error handler
     img.onerror = function () {
-        wordcloudArea.innerHTML = '<div style="padding:1rem; color: #666;">尚無此公司的文字雲圖片</div>';
+        console.error(`[WordCloud] Failed to load image: ${imgPath}`);
+        wordcloudArea.innerHTML = `<div style="padding:1rem; color: #666;">尚無此公司的文字雲圖片<br><small style="color:#999">(${stockId}_${year}_word_cloud.png)</small></div>`;
     };
 
     wordcloudArea.appendChild(img);
 }
-
-
-
 
 
 // 輔助函式：截斷字串
