@@ -35,216 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // renderCompanies(companiesData);
 });
 
-// --- 讀取 JSON 的函式 ---
-async function loadSasbData() {
-    try {
-        // 使用正確的 JSON 路徑
-        const response = await fetch(sasbJsonPath);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        sasbRawData = await response.json();
-
-        // 解析資料，生成議題列表
-        if (sasbRawData.length > 0) {
-            SASB_TOPICS = sasbRawData.map(item => item["議題"]);
-            console.log("SASB 資料載入成功:", sasbRawData.length, "筆資料");
-        }
-
-    } catch (error) {
-        console.warn("注意：SASB_weightMap.json 讀取失敗，可能是路徑錯誤或檔案不存在。", error);
-        // 即使讀取失敗，也不要讓程式當機，僅顯示警告
-        document.getElementById('sasbContainer').innerHTML = '<div style="padding:1rem">無法載入產業權重地圖 (JSON 讀取失敗)</div>';
-    }
-}
-
-// 渲染公司列表 (Table Row) - 支援分頁
-function renderCompanies(data) {
-    const container = document.getElementById('companiesContainer');
-    container.innerHTML = '';
-
-    if (!data || data.length === 0) {
-        container.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;">查無資料</td></tr>';
-        document.getElementById('paginationControls').style.display = 'none';
-        return;
-    }
-
-    // 計算分頁
-    const totalPages = Math.ceil(data.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const pageData = data.slice(startIndex, endIndex);
-
-    // 更新分頁控制
-    updatePaginationControls(totalPages);
-
-    const getScoreLevel = (score) => {
-        // 確保 score 是數字
-        const num = parseFloat(score);
-        // 假設: 0-25 高風險(紅), 26-50 中風險(黃), 51-75 低風險(橘), >75 無風險(綠)
-        if (num <= 25) return { text: '高', color: 'red' };
-        if (num <= 50) return { text: '中', color: 'orange' };
-        if (num <= 75) return { text: '低', color: '#d4ac0d' };
-        return { text: '無', color: 'green' };
-    };
-
-    // 這裡先假設後端有算好的分數，直接抓來用
-
-    pageData.forEach(company => {
-        // 判斷風險等級顏色 (分數越高越好/越綠)
-        // 根據 Python 邏輯: Score 是百分比。
-        const totalRisk = getScoreLevel(company.greenwashingScore);
-        const eLevel = getScoreLevel(company.eScore);
-        const sLevel = getScoreLevel(company.sScore);
-        const gLevel = getScoreLevel(company.gScore);
-        const indName = company.industry;
-
-        const tr = document.createElement('tr');
-        tr.style.textAlign = 'center';
-        tr.style.cursor = 'pointer';
-        tr.style.borderBottom = '1px solid #eee';
-
-        tr.innerHTML = `
-            <td style="padding: 1rem; font-weight: bold; color: var(--primary);">${company.name}</td>
-            <td style="padding: 1rem;">${company.stockId || '-'}</td>
-            <td style="padding: 1rem;">${company.industry}</td>
-            <td style="padding: 1rem;">${company.year}</td>
-            <td style="padding: 1rem;color: ${totalRisk.color}; font-weight: bold;">${totalRisk.text}</td>
-            <td style="padding: 1rem;color: ${eLevel.color};">${eLevel.text}</td>
-            <td style="padding: 1rem;color: ${sLevel.color};">${sLevel.text}</td>
-            <td style="padding: 1rem;color: ${gLevel.color};">${gLevel.text}</td>
-            <td style="padding: 1rem;">
-                <button class="btn" style="padding: 5px 10px; font-size: 0.8rem;">查看詳情</button>
-            </td>
-        `;
-
-        // 綁定點擊事件 (注意這裡不能直接 onclick="showDetail" 因為傳遞物件會有引號問題)
-        tr.onclick = () => showDetail(company);
-
-        container.appendChild(tr);
-    });
-}
-
-// 顯示詳細視圖
-function showDetail(company) {
-    currentCompany = company;
-    currentField = null;
-    document.getElementById('filterHint').style.display = 'none';
-    document.getElementById('detailCompanyName').textContent = `${company.name} - 詳細分析 (${company.year}年)`;
-
-    generateWordcloud(company); // 呼叫亂數文字雲
-    renderLayer4(company);
-    renderLayer6(company);      // 顯示 SASB 地圖
-
-    document.querySelectorAll('.analysis-section').forEach(el => {
-        el.classList.remove('hidden');
-    });
-
-    document.getElementById('detailView').classList.add('active');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function closeDetail() {
-    document.getElementById('detailView').classList.remove('active');
-    currentCompany = null;
-}
-
-function filterByField(field) {
-    // 前端篩選詳細頁籤 (E/S/G) 的功能
-    const fieldMap = { 'E': '環境', 'S': '社會', 'G': '治理' };
-    currentField = field;
-    document.getElementById('filterHint').style.display = 'block';
-    document.getElementById('filterFieldName').textContent = fieldMap[field];
-
-    document.querySelectorAll('.analysis-section').forEach(el => {
-        el.classList.add('hidden');
-    });
-
-    // 顯示特定區塊 (這裡依需求調整顯示哪些層)
-    document.getElementById('layer4').classList.remove('hidden');
-    // document.getElementById('layer5').classList.remove('hidden');
-}
-
-function clearFilter() {
-    currentField = null;
-    document.getElementById('filterHint').style.display = 'none';
-    document.querySelectorAll('.analysis-section').forEach(el => {
-        el.classList.remove('hidden');
-    });
-}
-
-// [修改點 A] 改寫文字雲生成邏輯：先使用亂數假資料
-function generateWordcloud(company) {
-    const wordcloudArea = document.getElementById('wordcloudArea');
-    wordcloudArea.innerHTML = '';
-
-    // Error handling if stockId or year is missing
-    if (!company.stockId || !company.year) {
-        wordcloudArea.innerHTML = '<div style="padding:1rem; color: #666;">無法顯示文字雲：資料缺漏 (StockID 或 Year)</div>';
-        return;
-    }
-
-    const imgPath = `/static/images/${company.stockId}_${company.year}_word_cloud.png`;
-
-    const img = document.createElement('img');
-    img.src = imgPath;
-    img.alt = `${company.name} 文字雲`;
-    img.style.maxWidth = '100%';
-    img.style.height = 'auto';
-    img.style.display = 'block';
-    img.style.margin = '0 auto';
-
-    // Simple error handling for image 404
-    img.onerror = function () {
-        wordcloudArea.innerHTML = '<div style="padding:1rem; color: #666;">尚無此公司的文字雲圖片</div>';
-    };
-
-    wordcloudArea.appendChild(img);
-}
-
-function renderLayer4(company) {
-    const tableBody = document.getElementById('layer4Table');
-    tableBody.innerHTML = '';
-
-    // 注意：後端傳來的資料結構要是 list of dicts
-    if (!company.layer4Data || company.layer4Data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">無資料</td></tr>';
-        return;
-    }
-
-    company.layer4Data.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${row.category}</td>
-            <td>${row.sasb_topic}</td> <td>${row.page_number || '-'}</td>
-            <td>${row.report_claim || '-'}</td>
-            <td>${row.adjustment_score}</td>
-            <td>${getRiskLabel(row.risk_score)}</td>
-        `;
-        tableBody.appendChild(tr);
-    });
-}
-
-function getRiskLabel(score) {
-    let labelClass = '';
-    let labelText = '';
-    const numScore = Number(score);
-
-    if (numScore === 4) {
-        labelClass = 'no'; labelText = '無風險 (4)';
-    } else if (numScore === 3) {
-        labelClass = 'low'; labelText = '低風險 (3)';
-    } else if (numScore === 2) {
-        labelClass = 'medium'; labelText = '中風險 (2)';
-    } else if (numScore <= 1) {
-        labelClass = 'high'; labelText = '高風險 (' + numScore + ')';
-    } else {
-        labelClass = 'no'; labelText = numScore;
-    }
-    return `<span class="risk-label ${labelClass}">${labelText}</span>`;
-}
+// --- 第一部分：資料搜尋與篩選 (Search & Filter) ---
 
 function setupEventListeners() {
     console.log("Setting up event listeners...");
@@ -292,15 +83,28 @@ function handleSearch() {
         closeDetail();
     }
 
-    filterCompanies();
+    // 隱藏狀態顯示區域（清除之前的錯誤或成功訊息）
+    document.getElementById('statusDisplay').style.display = 'none';
 
-    // 隱藏初始提示，顯示結果
-    document.getElementById('initialPrompt').style.display = 'none';
-    document.getElementById('resultsDashboard').style.display = 'block';
+    // 取得輸入的公司代碼和年份
+    const companyCode = document.getElementById('searchInput').value.trim();
+    const year = document.getElementById('yearFilter').value;
+
+    // 如果有輸入公司代碼，則呼叫新的查詢 API
+    if (companyCode && year) {
+        queryCompanyData(parseInt(year), companyCode);
+    } else {
+        // 否則使用舊的篩選邏輯
+        filterCompanies();
+
+        // 隱藏初始提示，顯示結果
+        document.getElementById('initialPrompt').style.display = 'none';
+        document.getElementById('resultsDashboard').style.display = 'block';
+    }
 }
 
 function filterCompanies() {
-    const search = document.getElementById('searchInput').value.toLowerCase().trim();
+    const search = document.getElementById('searchInput').value.toUpperCase().trim();
     const industry = document.getElementById('industryFilter').value;
     const year = document.getElementById('yearFilter').value;
 
@@ -308,8 +112,8 @@ function filterCompanies() {
 
     // 使用全域的 companiesData (來自 HTML)
     filteredData = companiesData.filter(c => {
-        const matchSearch = c.name.toLowerCase().includes(search) ||
-            (c.stockId && c.stockId.includes(search));
+        // 只比對公司代碼（stockId）
+        const matchSearch = !search || (c.stockId && c.stockId.includes(search));
         const matchIndustry = !industry || c.industry === industry;
         const matchYear = !year || c.year.toString() === year;
         return matchSearch && matchIndustry && matchYear;
@@ -320,6 +124,63 @@ function filterCompanies() {
     // 重置到第一頁
     currentPage = 1;
     renderCompanies(filteredData);
+}
+
+// --- 第二部分：公司列表顯示 (List View) ---
+
+// 渲染公司列表 (Table Row) - 支援分頁
+function renderCompanies(data) {
+    const container = document.getElementById('companiesContainer');
+    container.innerHTML = '';
+
+    if (!data || data.length === 0) {
+        container.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;">查無資料</td></tr>';
+        document.getElementById('paginationControls').style.display = 'none';
+        return;
+    }
+
+    // 計算分頁
+    const totalPages = Math.ceil(data.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageData = data.slice(startIndex, endIndex);
+
+    // 更新分頁控制
+    updatePaginationControls(totalPages);
+
+    pageData.forEach(company => {
+        // 判斷風險等級顏色 (分數越高越好/越綠)
+        // 根據 Python 邏輯: Score 是百分比。
+        const totalRisk = getRiskColor(company.greenwashingScore);
+        const eLevel = getRiskColor(company.eScore);
+        const sLevel = getRiskColor(company.sScore);
+        const gLevel = getRiskColor(company.gScore);
+        const indName = company.industry;
+
+        const tr = document.createElement('tr');
+        tr.style.textAlign = 'center';
+        tr.style.cursor = 'pointer';
+        tr.style.borderBottom = '1px solid #eee';
+
+        tr.innerHTML = `
+            <td style="padding: 1rem; font-weight: bold; color: var(--primary);">${company.name}</td>
+            <td style="padding: 1rem;">${company.stockId || '-'}</td>
+            <td style="padding: 1rem;">${company.industry}</td>
+            <td style="padding: 1rem;">${company.year}</td>
+            <td style="padding: 1rem;color: ${totalRisk.color}; font-weight: bold;">${totalRisk.text}</td>
+            <td style="padding: 1rem;color: ${eLevel.color};">${eLevel.text}</td>
+            <td style="padding: 1rem;color: ${sLevel.color};">${sLevel.text}</td>
+            <td style="padding: 1rem;color: ${gLevel.color};">${gLevel.text}</td>
+            <td style="padding: 1rem;">
+                <button class="btn" style="padding: 5px 10px; font-size: 0.8rem;">查看詳情</button>
+            </td>
+        `;
+
+        // 綁定點擊事件
+        tr.onclick = () => showDetail(company);
+
+        container.appendChild(tr);
+    });
 }
 
 // 更新分頁控制
@@ -349,6 +210,150 @@ function updatePaginationControls(totalPages) {
     nextButton.style.cursor = nextButton.disabled ? 'not-allowed' : 'pointer';
 }
 
+// 輔助函式：取得表格中的風險顏色 (與 getRiskLabel 類似但返回物件)
+function getRiskColor(score) {
+    // 確保 score 是數字
+    const num = parseFloat(score);
+    // 假設: 0-25 高風險(紅), 26-50 中風險(黃), 51-75 低風險(橘), >75 無風險(綠)
+    if (num <= 25) return { text: '高', color: 'red' };
+    if (num <= 50) return { text: '中', color: 'orange' };
+    if (num <= 75) return { text: '低', color: '#d4ac0d' };
+    return { text: '無', color: 'green' };
+};
+
+// --- 第三部分：詳細視圖 (Detail View) ---
+
+// 顯示詳細視圖
+function showDetail(company) {
+    currentCompany = company;
+    currentField = null;
+    document.getElementById('filterHint').style.display = 'none';
+    document.getElementById('detailCompanyName').textContent = `${company.name} - 詳細分析 (${company.year}年)`;
+
+    // 依序執行渲染
+    renderLayer4(company);
+    renderLayer5(company); // [New] 新增 Layer 5 的渲染
+    renderLayer6(company);
+    generateWordcloud(company); // 文字雲放到最後
+
+    document.querySelectorAll('.analysis-section').forEach(el => {
+        el.classList.remove('hidden');
+    });
+
+    document.getElementById('detailView').classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// 關閉詳細視圖
+function closeDetail() {
+    currentCompany = null;
+    document.getElementById('detailView').classList.remove('active');
+    // 如果需要清空內容可以加：
+    // document.getElementById('layer4Table').innerHTML = '';
+    // document.getElementById('layer5Table').innerHTML = '';
+}
+
+function filterByField(field) {
+    // 前端篩選詳細頁籤 (E/S/G) 的功能
+    const fieldMap = { 'E': '環境', 'S': '社會', 'G': '治理' };
+    currentField = field;
+    document.getElementById('filterHint').style.display = 'block';
+    document.getElementById('filterFieldName').textContent = fieldMap[field];
+
+    document.querySelectorAll('.analysis-section').forEach(el => {
+        el.classList.add('hidden');
+    });
+
+    // 顯示特定區塊 (這裡依需求調整顯示哪些層)
+    document.getElementById('layer4').classList.remove('hidden');
+    // document.getElementById('layer5').classList.remove('hidden');
+}
+
+function clearFilter() {
+    currentField = null;
+    document.getElementById('filterHint').style.display = 'none';
+    document.querySelectorAll('.analysis-section').forEach(el => {
+        el.classList.remove('hidden');
+    });
+}
+
+// [Layer 4] 內部比對
+function renderLayer4(company) {
+    const tableBody = document.getElementById('layer4Table');
+    tableBody.innerHTML = '';
+
+    if (!company.layer4Data || company.layer4Data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">無資料</td></tr>';
+        return;
+    }
+
+    company.layer4Data.forEach(row => {
+        // 1. 計算調整後的分數 (Net Score)
+        const initialRisk = parseFloat(row.risk_score) || 0;
+        // const deduction = parseFloat(row.adjustment_score) || 0;
+        // 分數最低扣到 0，不出現負分
+        // const netScore = Math.max(0, initialRisk - deduction).toFixed(1);
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${row.ESG_category || ''}</td>
+            <td title="${row.SASB_topic}">${row.SASB_topic || ''}</td> 
+            <td>${row.page_number || '-'}</td>
+            <td title="${row.report_claim}">${cutString(row.report_claim, 15)}</td>
+            
+            <td style="color: #666; font-size: 0.9em;">
+                ${row.greenwashing_factor || '-'}
+            </td>
+
+            <td>${getRiskLabel(initialRisk)}</td>
+        `;
+        tableBody.appendChild(tr);
+    });
+}
+
+// [Layer 5] 外部新聞揭露對比
+function renderLayer5(company) {
+    const tableBody = document.getElementById('layer5Table');
+    tableBody.innerHTML = '';
+
+    const dataWithEvidence = company.layer4Data;
+
+    if (!dataWithEvidence || dataWithEvidence.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">無相關外部證據資料</td></tr>';
+        return;
+    }
+
+    dataWithEvidence.forEach(row => {
+        // 計算 Net Score
+        const initialRisk = parseFloat(row.risk_score) || 0;
+        const deduction = parseFloat(row.adjustment_score) || 0;
+        const netScore = Math.max(0, initialRisk - deduction).toFixed(1);
+
+        const evidence = row.external_evidence || '-';
+        const status = row.consistency_status || '待確認';
+        const msci = row.MSCI_flag || '-';
+        const url = row.external_evidence_url ? `<a href="${row.external_evidence_url}" target="_blank">連結</a>` : '-';
+
+        let statusColor = 'black';
+        if (status.includes('不一致')) statusColor = 'var(--danger)';
+        else if (status.includes('一致')) statusColor = 'var(--success)';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${row.ESG_category}</td>
+            <td title="${row.report_claim}">${cutString(row.report_claim, 15)}</td>
+            <td title="${evidence}">${cutString(evidence, 15)}</td>
+            <td>${url}</td>
+            <td style="color:${statusColor}; font-weight:bold;">${status}</td>
+            <td>${msci}</td>
+            
+            <td>${getRiskLabel(netScore)}</td>
+        `;
+        tableBody.appendChild(tr);
+    });
+}
+
+// [Layer 6] SASB 產業權重分布
 function renderLayer6(company) {
     const container = document.getElementById('sasbContainer');
     if (!container) return;
@@ -391,4 +396,379 @@ function renderLayer6(company) {
 
         container.appendChild(item);
     });
+}
+
+// [Layer 7] 文字雲生成
+function generateWordcloud(company) {
+    const wordcloudArea = document.getElementById('wordcloudArea');
+
+    // Dispose existing chart if any, to avoid memory leaks or conflicts
+    const existingChart = echarts.getInstanceByDom(wordcloudArea);
+    if (existingChart) {
+        existingChart.dispose();
+    }
+
+    wordcloudArea.innerHTML = '';
+    // Set explicit dimensions for Echarts
+    wordcloudArea.style.width = '100%';
+    wordcloudArea.style.height = '500px';
+
+    // Error handling if stockId or year is missing
+    if (!company.stockId || !company.year) {
+        console.warn('generateWordcloud: Missing stockId or year', company);
+        wordcloudArea.innerHTML = '<div style="padding:1rem; color: #666;">無法顯示文字雲：資料缺漏 (StockID 或 Year)</div>';
+        wordcloudArea.style.height = 'auto';
+        return;
+    }
+
+    const stockId = String(company.stockId).trim();
+    const year = String(company.year).trim();
+
+    // Construct path to JSON
+    // Note: User mentioned file name format 1102_2024_wc.json
+    const jsonPath = `/wordcloud/${stockId}_${year}_wc.json`;
+    console.log(`[WordCloud] Attempting to load JSON: ${jsonPath}`, { stockId, year });
+
+    // Show loading state
+    wordcloudArea.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%; color:#666;">載入文字雲中...</div>';
+
+    fetch(jsonPath)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Clear loading message
+            wordcloudArea.innerHTML = '';
+
+            const chart = echarts.init(wordcloudArea);
+
+            // Determine size range based on screen width
+            const isDesktop = window.innerWidth > 768;
+            const sizeRange = isDesktop ? [30, 90] : [12, 50];
+
+            const option = {
+                tooltip: {
+                    show: true,
+                    formatter: '{b}: {c}'
+                },
+                series: [{
+                    type: 'wordCloud',
+                    shape: 'circle',
+                    left: 'center',
+                    top: 'center',
+                    width: '95%',
+                    height: '95%',
+                    right: null,
+                    bottom: null,
+                    sizeRange: sizeRange,
+                    rotationRange: [-45, 90],
+                    rotationStep: 45,
+                    gridSize: 8,
+                    drawOutOfBound: false,
+                    layoutAnimation: true,
+                    textStyle: {
+                        fontFamily: 'sans-serif',
+                        fontWeight: 'bold',
+                        color: function () {
+                            // Random colors
+                            return 'rgb(' + [
+                                Math.round(Math.random() * 160),
+                                Math.round(Math.random() * 160),
+                                Math.round(Math.random() * 160)
+                            ].join(',') + ')';
+                        }
+                    },
+                    emphasis: {
+                        focus: 'self',
+                        textStyle: {
+                            shadowBlur: 10,
+                            shadowColor: '#333'
+                        }
+                    },
+                    data: data
+                }]
+            };
+
+            chart.setOption(option);
+
+            // Handle window resize
+            window.addEventListener('resize', function () {
+                chart.resize();
+
+                // 動態調整文字大小範圍
+                const newIsDesktop = window.innerWidth > 768;
+                const newSizeRange = newIsDesktop ? [30, 90] : [12, 50];
+
+                chart.setOption({
+                    series: [{
+                        sizeRange: newSizeRange
+                    }]
+                });
+            });
+        })
+        .catch(err => {
+            console.error('[WordCloud] Load failed:', err);
+            wordcloudArea.innerHTML = `<div style="padding:1rem; color: #666; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%;">
+                <p>無法載入文字雲資料</p>
+                <small style="color:#999">(${stockId}_${year}_wc.json)</small>
+            </div>`;
+        });
+}
+
+// --- 輔助函式與資料讀取 (Helpers & Data) ---
+
+// 讀取 SASB JSON
+async function loadSasbData() {
+    try {
+        // 使用正確的 JSON 路徑
+        const response = await fetch(sasbJsonPath);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        sasbRawData = await response.json();
+
+        // 解析資料，生成議題列表
+        if (sasbRawData.length > 0) {
+            SASB_TOPICS = sasbRawData.map(item => item["議題"]);
+            console.log("SASB 資料載入成功:", sasbRawData.length, "筆資料");
+        }
+
+    } catch (error) {
+        console.warn("注意：SASB_weightMap.json 讀取失敗，可能是路徑錯誤或檔案不存在。", error);
+        // 即使讀取失敗，也不要讓程式當機，僅顯示警告
+        document.getElementById('sasbContainer').innerHTML = '<div style="padding:1rem">無法載入產業權重地圖 (JSON 讀取失敗)</div>';
+    }
+}
+
+// 輔助函式：截斷字串
+function cutString(str, len) {
+    if (!str) return '-';
+    if (str.length <= len) return str;
+    return str.substring(0, len) + '...';
+}
+
+// 輔助函式：取得風險標籤 (支援小數點判斷)
+// 邏輯：分數越高越安全(綠)，越低越危險(紅)
+function getRiskLabel(score) {
+    const numScore = parseFloat(score); // 確保是數字
+
+    // 防呆：若非數字則回傳原始值
+    if (isNaN(numScore)) return score;
+
+    let labelClass = '';
+    let labelText = '';
+
+    // 定義分數區間
+    // >= 3.5 : 無風險 (綠)
+    // >= 2.5 : 低風險 (黃)
+    // >= 1.5 : 中風險 (橘)
+    // < 1.5  : 高風險 (紅)
+
+    if (numScore >= 3.5) {
+        labelClass = 'no';
+        labelText = `無風險 (${numScore})`;
+    } else if (numScore >= 2.5) {
+        labelClass = 'low';
+        labelText = `低風險 (${numScore})`;
+    } else if (numScore >= 1.5) {
+        labelClass = 'medium';
+        labelText = `中風險 (${numScore})`;
+    } else {
+        labelClass = 'high';
+        labelText = `高風險 (${numScore})`;
+    }
+
+    return `<span class="risk-label ${labelClass}">${labelText}</span>`;
+}
+
+// --- 自動抓取與分析功能 ---
+
+// 查詢公司資料（呼叫新API）
+async function queryCompanyData(year, companyCode) {
+    try {
+        // 先顯示載入中狀態/或重置狀態，避免舊錯誤訊息殘留
+        showAnalysisStatus('processing', '查詢資料中...');
+
+        const response = await fetch('/api/query_company', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                year: year,
+                company_code: companyCode,
+                auto_fetch: false  // 先不自動抓取，等用戶確認
+            })
+        });
+
+        // 檢查回應是否成功
+        if (!response.ok) {
+            // 嘗試解析 JSON 錯誤訊息
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const errData = await response.json();
+                throw new Error(errData.message || `伺服器錯誤: ${response.status}`);
+            } else {
+                // 如果回傳的不是 JSON (例如 HTML 錯誤頁面)
+                const text = await response.text();
+                console.error("非 JSON 回應:", text.substring(0, 200)); // 只印出前200字避免洗版
+                throw new Error(`伺服器回應異常 (${response.status})，請稍後再試`);
+            }
+        }
+
+        const result = await response.json();
+        console.log('Query result:', result);
+
+        // 隱藏初始提示
+        document.getElementById('initialPrompt').style.display = 'none';
+
+        // 根據不同狀態顯示結果
+        showAnalysisStatus(result.status, result.message, result.data, year, companyCode);
+
+    } catch (error) {
+        console.error('查詢錯誤:', error);
+        // 處理 JSON 解析錯誤 (Unexpected token <)
+        let msg = error.message;
+        if (msg.includes("Unexpected token") || msg.includes("JSON")) {
+            msg = "系統錯誤 (解析失敗)，可能伺服器發生異常";
+        }
+        showAnalysisStatus('error', msg);
+    }
+}
+
+// 顯示不同狀態的內容
+function showAnalysisStatus(status, message, data = null, year = null, companyCode = null) {
+    const statusDisplay = document.getElementById('statusDisplay');
+    const statusContent = document.getElementById('statusContent');
+    const resultsDashboard = document.getElementById('resultsDashboard');
+
+    // 清空舊內容
+    statusContent.innerHTML = '';
+
+    if (status === 'completed') {
+        // ✅ 已完成：顯示資料
+        statusDisplay.style.display = 'none';
+        resultsDashboard.style.display = 'block';
+
+        // 使用現有的 renderCompanies 函式顯示資料
+        filteredData = [data];
+        currentPage = 1;
+        renderCompanies(filteredData);
+
+    } else if (status === 'processing') {
+        // ⏳ 處理中
+        statusDisplay.style.display = 'block';
+        resultsDashboard.style.display = 'none';
+
+        statusContent.innerHTML = `
+            <div style="text-align: center; padding: 2rem;">
+                <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+                <h3 style="color: var(--primary);">⏳ ${message}</h3>
+                <p style="color: var(--text-secondary);">系統正在進行分析，這可能需要數分鐘...</p>
+            </div>
+            <style>
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        `;
+
+    } else if (status === 'failed') {
+        // ❌ 失敗
+        statusDisplay.style.display = 'block';
+        resultsDashboard.style.display = 'none';
+
+        statusContent.innerHTML = `
+            <div style="text-align: center; padding: 2rem; background: #fff3cd; border-radius: 8px;">
+                <h3 style="color: #856404;">❌ 分析失敗</h3>
+                <p style="color: #856404;">${message}</p>
+                <button class="btn" onclick="confirmAutoFetch(${year}, '${companyCode}')" style="margin-top: 1rem;">
+                    🔄 重新啟動分析
+                </button>
+            </div>
+        `;
+
+    } else if (status === 'validation_needed') {
+        // ❓ 需要確認
+        statusDisplay.style.display = 'block';
+        resultsDashboard.style.display = 'none';
+
+        statusContent.innerHTML = `
+            <div style="text-align: center; padding: 2rem; background: #d1ecf1; border-radius: 8px;">
+                <h3 style="color: #0c5460;">❓ ${message}</h3>
+                <p style="color: #0c5460; margin: 1rem 0;">此操作將自動下載永續報告書並進行 AI 分析，可能需要較長時間。</p>
+                <button class="btn" onclick="confirmAutoFetch(${year}, '${companyCode}')" style="margin-top: 1rem; background: var(--primary); color: white;">
+                    ✅ 確認啟動
+                </button>
+                <button class="btn" onclick="cancelAutoFetch()" style="margin-top: 1rem; margin-left: 1rem; background: #6c757d; color: white;">
+                    ❌ 取消
+                </button>
+            </div>
+        `;
+
+    } else if (status === 'not_found') {
+        // ❌ 查無報告
+        statusDisplay.style.display = 'block';
+        resultsDashboard.style.display = 'none';
+
+        statusContent.innerHTML = `
+            <div style="text-align: center; padding: 2rem; background: #f8d7da; border-radius: 8px;">
+                <h3 style="color: #721c24;">❌ ${message}</h3>
+                <p style="color: #721c24;">請確認公司代碼與年度是否正確。</p>
+            </div>
+        `;
+
+    } else {
+        // 🔴 錯誤
+        statusDisplay.style.display = 'block';
+        resultsDashboard.style.display = 'none';
+
+        statusContent.innerHTML = `
+            <div style="text-align: center; padding: 2rem; background: #f8d7da; border-radius: 8px;">
+                <h3 style="color: #721c24;">🔴 ${message}</h3>
+            </div>
+        `;
+    }
+}
+
+// 確認啟動自動抓取
+async function confirmAutoFetch(year, companyCode) {
+    try {
+        // 顯示處理中狀態
+        showAnalysisStatus('processing', '正在啟動自動抓取與分析...');
+
+        const response = await fetch('/api/query_company', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                year: year,
+                company_code: companyCode,
+                auto_fetch: true  // 同意自動抓取
+            })
+        });
+
+        const result = await response.json();
+        console.log('Auto-fetch result:', result);
+
+        // 顯示最終結果
+        showAnalysisStatus(result.status, result.message, result.data, year, companyCode);
+
+    } catch (error) {
+        console.error('自動抓取錯誤:', error);
+        showAnalysisStatus('error', `系統錯誤: ${error.message}`);
+    }
+}
+
+// 取消自動抓取
+function cancelAutoFetch() {
+    document.getElementById('statusDisplay').style.display = 'none';
+    document.getElementById('initialPrompt').style.display = 'block';
 }

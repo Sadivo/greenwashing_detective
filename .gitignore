@@ -9,3 +9,6 @@ env/
 ENV/
 bin/
 lib/
+
+# python預加載資料
+__pycache__
