@@ -5,6 +5,7 @@ from collections import Counter
 from wordcloud import WordCloud
 import pdfplumber
 import time
+import json
 
 start_time = time.time()
 
@@ -27,10 +28,8 @@ def extract_text_from_pdf(pdf_path):
         return ""
 
 # 指定 PDF 路徑 (請依需求修改)
-# 假設 PDF 在上一層目錄的 "永續報告書/中鋼" 資料夾內
 pdf_file_path = r"../esgReport/亞泥2024永續報告書.pdf"
 
-# 取得 PDF 絕對路徑
 # 取得 PDF 絕對路徑
 base_dir = os.path.dirname(os.path.abspath(__file__)) # word_cloud 資料夾
 # 因為檔案是在 word_cloud/esgReport 下，所以直接接 base_dir
@@ -90,48 +89,69 @@ print(f"【自訂關鍵詞統計 (共 {total_keyword_count} 次)】:")
 for word, count in keywords_found.items():
     print(f"  - {word}: {count}")
 
-# 6. 生成文字雲
+# 輸出JSON檔供前端生成文字雲
 print("-" * 30)
-print("正在生成文字雲...")
-text_for_cloud = " ".join(filtered_words)
+print("正在輸出JSON檔...")
 
-# Windows 預設字體路徑 (微軟正黑體)
-font_path = "C:/Windows/Fonts/msjh.ttc"
-
-# 建立 WordCloud 物件
-wc = WordCloud(
-    font_path=font_path,
-    stopwords=stopwords,
-    width=800,
-    height=400,
-    max_words=80,
-    background_color="white",
-    prefer_horizontal=0.9
-).generate(text_for_cloud)
-
-# 顯示文字雲
-plt.figure(figsize=(10, 5))
-plt.imshow(wc, interpolation="bilinear")
-plt.axis("off")
-plt.title("ESG Word Cloud", fontsize=20)
-
-# 確保輸出目錄存在
+word_cloud_json = [{"name": word, "value": count} for word, count in word_counts.most_common(100)]
 output_dir = os.path.join(base_dir, "wc_output")
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
-# 先存檔，再顯示 (避免 show() 清空畫布導致存成白圖)
-output_path = os.path.join(output_dir, "company_num_word_cloud.png")
-plt.savefig(output_path)
-print(f"文字雲已儲存至: {output_path}")
 
-plt.show()
+# demo用
+company_code = "1102" 
+year = "2024"
+
+# 檔名範例 company_code_year_wc.json
+output_filename = f"{company_code}_{year}_wc.json"
+output_path = os.path.join(output_dir, output_filename)
+with open(output_path, "w", encoding="utf-8") as f:
+    json.dump(word_cloud_json, f, ensure_ascii=False, indent=2)
+
+print(f"JSON檔已儲存至: {output_path}")
+
+#==========生成文字雲png==========
+# # 6. 生成文字雲
+# print("-" * 30)
+# print("正在生成文字雲...")
+# text_for_cloud = " ".join(filtered_words)
+
+# # Windows 預設字體路徑 (微軟正黑體)
+# font_path = "C:/Windows/Fonts/msjh.ttc"
+
+# 建立 WordCloud 物件
+# wc = WordCloud(
+#     font_path=font_path,
+#     stopwords=stopwords,
+#     width=800,
+#     height=400,
+#     max_words=80,
+#     background_color="white",
+#     prefer_horizontal=0.9
+# ).generate(text_for_cloud)
+
+# # 顯示文字雲
+# plt.figure(figsize=(10, 5))
+# plt.imshow(wc, interpolation="bilinear")
+# plt.axis("off")
+# plt.title("ESG Word Cloud", fontsize=20)
+
+# # 確保輸出目錄存在
+# output_dir = os.path.join(base_dir, "wc_output")
+# if not os.path.exists(output_dir):
+#     os.makedirs(output_dir)
+# # 先存檔，再顯示 (避免 show() 清空畫布導致存成白圖)
+# output_path = os.path.join(output_dir, "company_num_word_cloud.png")
+# plt.savefig(output_path)
+# print(f"文字雲已儲存至: {output_path}")
+
+# plt.show()
+#==========生成文字雲png==========
+
 
 end_time = time.time()
 execution_time = end_time - start_time
 print(f"程式執行時間: {execution_time:.2f} 秒")
 
 # 待加強功能---
-# wordcloud.png title 改成公司或不顯示 company_name="", year="" f"{company_name}_{year}_word_cloud.png"
-# 直接丟到網頁上，不要圖片
-# 存檔改成公司代號
 # 需分成讀取PDF以及抓取現有資料
