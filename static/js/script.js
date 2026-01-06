@@ -274,7 +274,7 @@ function renderLayer4(company) {
         return;
     }
 
-    company.layer4Data.forEach(row => {
+    company.layer4Data.forEach((row, index) => {
         // 1. 計算調整後的分數 (Net Score)
         const initialRisk = parseFloat(row.risk_score) || 0;
         // const deduction = parseFloat(row.adjustment_score) || 0;
@@ -282,6 +282,10 @@ function renderLayer4(company) {
         // const netScore = Math.max(0, initialRisk - deduction).toFixed(1);
 
         const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.style.transition = 'background-color 0.2s';
+        const expandId = `layer4-expand-${index}`;
+
         tr.innerHTML = `
             <td>${row.ESG_category || ''}</td>
             <td title="${row.SASB_topic}">${row.SASB_topic || ''}</td> 
@@ -294,6 +298,25 @@ function renderLayer4(company) {
 
             <td>${getRiskLabel(initialRisk)}</td>
         `;
+
+        // Hover 效果
+        tr.addEventListener('mouseenter', function () {
+            this.style.backgroundColor = '#f8f9fa';
+        });
+        tr.addEventListener('mouseleave', function () {
+            this.style.backgroundColor = '';
+        });
+
+        // 整行點擊展開
+        tr.addEventListener('click', function () {
+            toggleExpandRow(expandId, {
+                type: 'layer4',
+                sasbTopic: row.SASB_topic || '-',
+                reportClaim: row.report_claim || '-',
+                greenwashingFactor: row.greenwashing_factor || '-'
+            }, tr);
+        });
+
         tableBody.appendChild(tr);
     });
 }
@@ -310,7 +333,7 @@ function renderLayer5(company) {
         return;
     }
 
-    dataWithEvidence.forEach(row => {
+    dataWithEvidence.forEach((row, index) => {
         // 計算 Net Score
         const initialRisk = parseFloat(row.risk_score) || 0;
         const deduction = parseFloat(row.adjustment_score) || 0;
@@ -319,13 +342,17 @@ function renderLayer5(company) {
         const evidence = row.external_evidence || '-';
         const status = row.consistency_status || '待確認';
         const msci = row.MSCI_flag || '-';
-        const url = row.external_evidence_url ? `<a href="${row.external_evidence_url}" target="_blank">連結</a>` : '-';
+        const url = row.external_evidence_url ? `<a href="${row.external_evidence_url}" target="_blank" onclick="event.stopPropagation();">連結</a>` : '-';
 
         let statusColor = 'black';
         if (status.includes('不一致')) statusColor = 'var(--danger)';
         else if (status.includes('一致')) statusColor = 'var(--success)';
 
         const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.style.transition = 'background-color 0.2s';
+        const expandId = `layer5-expand-${index}`;
+
         tr.innerHTML = `
             <td>${row.ESG_category}</td>
             <td title="${row.report_claim}">${cutString(row.report_claim, 15)}</td>
@@ -336,6 +363,27 @@ function renderLayer5(company) {
             
             <td>${getRiskLabel(netScore)}</td>
         `;
+
+        // Hover 效果
+        tr.addEventListener('mouseenter', function () {
+            this.style.backgroundColor = '#f8f9fa';
+        });
+        tr.addEventListener('mouseleave', function () {
+            this.style.backgroundColor = '';
+        });
+
+        // 整行點擊展開
+        tr.addEventListener('click', function (e) {
+            // 如果點擊的是連結，不觸發展開
+            if (e.target.tagName === 'A') return;
+
+            toggleExpandRow(expandId, {
+                type: 'layer5',
+                reportClaim: row.report_claim || '-',
+                externalEvidence: evidence
+            }, tr);
+        });
+
         tableBody.appendChild(tr);
     });
 }
@@ -438,8 +486,7 @@ function generateWordcloud(company) {
 
             const option = {
                 tooltip: {
-                    show: true,
-                    formatter: '{b}: {c}'
+                    show: false
                 },
                 series: [{
                     type: 'wordCloud',
@@ -506,6 +553,117 @@ function generateWordcloud(company) {
 }
 
 // --- 輔助函式與資料讀取 (Helpers & Data) ---
+
+// 切換展開行顯示
+function toggleExpandRow(expandId, data, parentRow) {
+    const existingExpandRow = document.getElementById(expandId);
+
+    if (existingExpandRow) {
+        // 已存在，則移除（收縮動畫）
+        const contentDiv = existingExpandRow.querySelector('td > div');
+
+        // 添加收縮動畫
+        existingExpandRow.style.opacity = '0';
+        if (contentDiv) {
+            contentDiv.style.transform = 'translateY(-10px)';
+        }
+
+        // 動畫結束後移除元素
+        setTimeout(() => {
+            existingExpandRow.remove();
+        }, 300);
+    } else {
+        // 不存在，則創建展開行
+        const expandRow = document.createElement('tr');
+        expandRow.id = expandId;
+        expandRow.style.backgroundColor = '#f8fbff';
+        expandRow.style.opacity = '0';
+        expandRow.style.transition = 'opacity 0.3s ease-out';
+
+        const colCount = parentRow.cells.length;
+
+        let content = '';
+
+        if (data.type === 'layer4') {
+            // 第四層：顯示 sasb_topic、report_claim、greenwashing_factor
+            content = `
+                <div style="padding: 1.5rem; line-height: 1.8; color: #333; transform: translateY(-10px); transition: transform 0.5s ease-out;">
+                    <div style="display: grid; gap: 1rem;">
+                        <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid #4CAF50;">
+                            <div style="font-weight: bold; color: #2c3e50; margin-bottom: 0.5rem; font-size: 0.9em;">
+                                📊 SASB 議題
+                            </div>
+                            <div style="color: #34495e;">
+                                ${data.sasbTopic}
+                            </div>
+                        </div>
+                        
+                        <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid #2196F3;">
+                            <div style="font-weight: bold; color: #2c3e50; margin-bottom: 0.5rem; font-size: 0.9em;">
+                                📝 ESG 報告宣稱
+                            </div>
+                            <div style="color: #34495e; white-space: pre-wrap; word-wrap: break-word;">
+                                ${data.reportClaim}
+                            </div>
+                        </div>
+                        
+                        <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid #FF9800;">
+                            <div style="font-weight: bold; color: #2c3e50; margin-bottom: 0.5rem; font-size: 0.9em;">
+                                ⚠️ 漂綠因子
+                            </div>
+                            <div style="color: #34495e;">
+                                ${data.greenwashingFactor}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (data.type === 'layer5') {
+            // 第五層：顯示 report_claim、external_evidence
+            content = `
+                <div style="padding: 1.5rem; line-height: 1.8; color: #333; transform: translateY(-10px); transition: transform 0.5s ease-out;">
+                    <div style="display: grid; gap: 1rem;">
+                        <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid #2196F3;">
+                            <div style="font-weight: bold; color: #2c3e50; margin-bottom: 0.5rem; font-size: 0.9em;">
+                                📝 ESG 報告宣稱
+                            </div>
+                            <div style="color: #34495e; white-space: pre-wrap; word-wrap: break-word;">
+                                ${data.reportClaim}
+                            </div>
+                        </div>
+                        
+                        <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid #9C27B0;">
+                            <div style="font-weight: bold; color: #2c3e50; margin-bottom: 0.5rem; font-size: 0.9em;">
+                                🔍 外部證據
+                            </div>
+                            <div style="color: #34495e; white-space: pre-wrap; word-wrap: break-word;">
+                                ${data.externalEvidence}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        expandRow.innerHTML = `
+            <td colspan="${colCount}" style="padding: 0; border-left: 3px solid var(--primary);">
+                ${content}
+            </td>
+        `;
+
+        // 在當前行後插入展開行
+        parentRow.parentNode.insertBefore(expandRow, parentRow.nextSibling);
+
+        // 觸發展開動畫（使用 requestAnimationFrame 確保 DOM 更新後才開始動畫）
+        requestAnimationFrame(() => {
+            expandRow.style.opacity = '1';
+            const contentDiv = expandRow.querySelector('td > div');
+            if (contentDiv) {
+                contentDiv.style.transform = 'translateY(0)';
+            }
+        });
+    }
+}
 
 // 讀取 SASB JSON
 async function loadSasbData() {
