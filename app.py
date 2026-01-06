@@ -208,6 +208,7 @@ def query_company():
                     year=year,
                     company_code=company_code,
                     company_name=report_info.get('company_name', ''),
+                    industry=report_info.get('sector', ''),  # 添加產業類別
                     status='processing'
                 )
                 
@@ -233,8 +234,14 @@ def query_company():
                 
                 pdf_path = pdf_path_or_error
                 
-                # Step 3: AI 分析（使用模擬版本）
-                analysis_result = analyze_esg_report_mock(pdf_path, year, company_code)
+                # Step 3: AI 分析（使用模擬版本，傳入真實的公司資料）
+                analysis_result = analyze_esg_report_mock(
+                    pdf_path, 
+                    year, 
+                    company_code,
+                    company_name=report_info.get('company_name', ''),
+                    industry=report_info.get('sector', '')
+                )
                 
                 # Step 4: 插入分析結果至資料庫
                 insert_success, insert_msg = insert_analysis_results(

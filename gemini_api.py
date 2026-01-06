@@ -289,34 +289,41 @@ def analyze_esg_report(pdf_path: str, year: int, company_code: str) -> dict:
     raise NotImplementedError("AI 分析模組尚未實作，請使用 analyze_esg_report_mock() 進行測試")
 
 
-def analyze_esg_report_mock(pdf_path: str, year: int, company_code: str) -> dict:
+def analyze_esg_report_mock(pdf_path: str, year: int, company_code: str, company_name: str = '', industry: str = '') -> dict:
     """
     模擬 AI 分析結果（測試用）
+    
+    Args:
+        pdf_path: PDF 檔案路徑
+        year: 報告年份
+        company_code: 公司代碼
+        company_name: 公司名稱（選填，若未提供則使用預設值）
+        industry: 產業類別（選填，若未提供則使用預設值）
     
     回傳假資料以供測試整體流程
     """
     import random
     
-    # 模擬公司名稱
-    company_names = {
-        '2330': '台積電',
-        '1314': '中石化',
-        '1102': '亞洲水泥',
-        '2454': '聯發科',
-        '2317': '鴻海'
-    }
+    # 若未傳入 company_name 或 industry，則使用預設值作為後備
+    if not company_name:
+        company_names = {
+            '2330': '台積電',
+            '1314': '中石化',
+            '1102': '亞洲水泥',
+            '2454': '聯發科',
+            '2317': '鴻海'
+        }
+        company_name = company_names.get(company_code, f'公司{company_code}')
     
-    # 模擬產業
-    industries = {
-        '2330': '半導體業',
-        '1314': '油電燃氣業',
-        '1102': '水泥工業',
-        '2454': '半導體業',
-        '2317': '電腦及週邊設備業'
-    }
-    
-    company_name = company_names.get(company_code, f'公司{company_code}')
-    industry = industries.get(company_code, '其他')
+    if not industry:
+        industries = {
+            '2330': '半導體業',
+            '1314': '油電燃氣業',
+            '1102': '水泥工業',
+            '2454': '半導體業',
+            '2317': '電腦及週邊設備業'
+        }
+        industry = industries.get(company_code, '其他')
     
     # 模擬分析項目（2-4 筆）
     sasb_topics = ['溫室氣體排放', '水資源與廢水處理管理', '員工健康與安全', '商業道德', '空氣品質', '廢棄物與有害物質管理']
