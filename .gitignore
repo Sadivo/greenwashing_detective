@@ -2,7 +2,7 @@
 __pycache__/
 *.pyc
 
-虛擬環境
+# 虛擬環境
 venv/
 .venv/
 env/
@@ -10,5 +10,5 @@ ENV/
 bin/
 lib/
 
-python預加載資料
-pycache
+# python預加載資料
+__pycache__
