@@ -152,15 +152,21 @@ function renderCompanies(data) {
         tr.style.cursor = 'pointer';
         tr.style.borderBottom = '1px solid #eee';
 
+        // 獲取風險等級對應的圖片路徑
+        const totalImg = getRiskImage(totalRisk.level);
+        const eImg = getRiskImage(eLevel.level);
+        const sImg = getRiskImage(sLevel.level);
+        const gImg = getRiskImage(gLevel.level);
+
         tr.innerHTML = `
             <td style="padding: 1rem; font-weight: bold; color: var(--primary);">${company.name}</td>
             <td style="padding: 1rem;">${company.stockId || '-'}</td>
             <td style="padding: 1rem;">${company.industry}</td>
             <td style="padding: 1rem;">${company.year}</td>
-            <td style="padding: 1rem;color: ${totalRisk.color}; font-weight: bold;">${totalRisk.text}</td>
-            <td style="padding: 1rem;color: ${eLevel.color};">${eLevel.text}</td>
-            <td style="padding: 1rem;color: ${sLevel.color};">${sLevel.text}</td>
-            <td style="padding: 1rem;color: ${gLevel.color};">${gLevel.text}</td>
+            <td style="padding: 1rem;"><img src="${totalImg}" alt="${totalRisk.text}" style="width: 80px; height: auto; display: block; margin: 0 auto;"></td>
+            <td style="padding: 1rem;"><img src="${eImg}" alt="${eLevel.text}" style="width: 80px; height: auto; display: block; margin: 0 auto;"></td>
+            <td style="padding: 1rem;"><img src="${sImg}" alt="${sLevel.text}" style="width: 80px; height: auto; display: block; margin: 0 auto;"></td>
+            <td style="padding: 1rem;"><img src="${gImg}" alt="${gLevel.text}" style="width: 80px; height: auto; display: block; margin: 0 auto;"></td>
             <td style="padding: 1rem;">
                 <button class="btn" style="padding: 5px 10px; font-size: 0.8rem;">查看詳情</button>
             </td>
@@ -205,11 +211,17 @@ function getRiskColor(score) {
     // 確保 score 是數字
     const num = parseFloat(score);
     // 假設: 0-39 高風險(紅), 40-59 中風險(橘紅), 60-84 低風險(金黃), >84 無風險(綠)
-    if (num <= 39) return { text: '高', color: 'red' };
-    if (num <= 59) return { text: '中', color: '#FF6B35' };  // 更明顯的橘紅色
-    if (num <= 84) return { text: '低', color: '#FFC107' };  // 更明亮的金黃色
-    return { text: '無', color: 'green' };
+    if (num <= 39) return { text: '高', color: 'red', level: 'high' };
+    if (num <= 59) return { text: '中', color: '#FF6B35', level: 'medium' };  // 更明顯的橘紅色
+    if (num <= 84) return { text: '低', color: '#FFC107', level: 'low' };  // 更明亮的金黃色
+    return { text: '無', color: 'green', level: 'no' };
 };
+
+// 輔助函式：根據風險等級返回圖片路徑
+function getRiskImage(level) {
+    const basePath = '/static/images/';
+    return `${basePath}${level}_risk.png`;
+}
 
 // --- 第三部分：詳細視圖 (Detail View) ---
 
