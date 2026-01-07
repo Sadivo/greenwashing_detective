@@ -201,10 +201,10 @@ function updatePaginationControls(totalPages) {
 function getRiskColor(score) {
     // 確保 score 是數字
     const num = parseFloat(score);
-    // 假設: 0-25 高風險(紅), 26-50 中風險(黃), 51-75 低風險(橘), >75 無風險(綠)
-    if (num <= 25) return { text: '高', color: 'red' };
-    if (num <= 50) return { text: '中', color: 'orange' };
-    if (num <= 75) return { text: '低', color: '#d4ac0d' };
+    // 假設: 0-39 高風險(紅), 40-59 中風險(橘紅), 60-84 低風險(金黃), >84 無風險(綠)
+    if (num <= 39) return { text: '高', color: 'red' };
+    if (num <= 59) return { text: '中', color: '#FF6B35' };  // 更明顯的橘紅色
+    if (num <= 84) return { text: '低', color: '#FFC107' };  // 更明亮的金黃色
     return { text: '無', color: 'green' };
 };
 
@@ -329,7 +329,7 @@ function renderLayer5(company) {
     const dataWithEvidence = company.layer4Data;
 
     if (!dataWithEvidence || dataWithEvidence.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">無相關外部證據資料</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">無相關外部證據資料</td></tr>';
         return;
     }
 
@@ -339,10 +339,16 @@ function renderLayer5(company) {
         const deduction = parseFloat(row.adjustment_score) || 0;
         const netScore = Math.max(0, initialRisk - deduction).toFixed(1);
 
-        const evidence = row.external_evidence || '-';
+        const evidenceText = row.external_evidence || '-';
+        const evidenceUrl = row.external_evidence_url;
+
+        // 如果有 URL，將證據文字變成超連結
+        const evidenceDisplay = evidenceUrl
+            ? `<a href="${evidenceUrl}" target="_blank" onclick="event.stopPropagation();" style="color: var(--primary); text-decoration: underline;" title="${evidenceText}">${cutString(evidenceText, 15)}</a>`
+            : `<span title="${evidenceText}">${cutString(evidenceText, 15)}</span>`;
+
         const status = row.consistency_status || '待確認';
         const msci = row.MSCI_flag || '-';
-        const url = row.external_evidence_url ? `<a href="${row.external_evidence_url}" target="_blank" onclick="event.stopPropagation();">連結</a>` : '-';
 
         let statusColor = 'black';
         if (status.includes('不一致')) statusColor = 'var(--danger)';
@@ -356,11 +362,9 @@ function renderLayer5(company) {
         tr.innerHTML = `
             <td>${row.ESG_category}</td>
             <td title="${row.report_claim}">${cutString(row.report_claim, 15)}</td>
-            <td title="${evidence}">${cutString(evidence, 15)}</td>
-            <td>${url}</td>
+            <td>${evidenceDisplay}</td>
             <td style="color:${statusColor}; font-weight:bold;">${status}</td>
             <td>${msci}</td>
-            
             <td>${getRiskLabel(netScore)}</td>
         `;
 
@@ -380,7 +384,7 @@ function renderLayer5(company) {
             toggleExpandRow(expandId, {
                 type: 'layer5',
                 reportClaim: row.report_claim || '-',
-                externalEvidence: evidence
+                externalEvidence: evidenceText
             }, tr);
         });
 
