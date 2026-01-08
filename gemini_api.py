@@ -12,9 +12,12 @@ from dotenv import load_dotenv
 # 1. 載入環境變數
 load_dotenv()
 
+# 取得程式檔案所在的目錄
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 class ESGReportAnalyzer:
     # ====== 設定檔與路徑 ======
-    INPUT_DIR = "ESG_Reports"
+    INPUT_DIR = os.path.join(SCRIPT_DIR, 'temp_data', 'esgReport')
     OUTPUT_DIR = "output_json"
     SASB_MAP_FILE = "SASB_weightMap.json"
     
@@ -43,7 +46,7 @@ class ESGReportAnalyzer:
         self.output_json_name = f"{base_name}_Analysis_Result.json"
 
     def _find_target_pdf(self) -> (str, str):
-        """在 ESG_Reports 資料夾中搜尋符合 年份_代碼 的 PDF"""
+        """在 temp_data/esgReport 資料夾中搜尋符合 年份_代碼 的 PDF"""
         if not os.path.exists(self.INPUT_DIR):
             raise FileNotFoundError(f"資料夾不存在: {self.INPUT_DIR}")
         
