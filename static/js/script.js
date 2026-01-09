@@ -816,6 +816,7 @@ function createVerifiedTooltip() {
             tooltip.style.display = 'none';
         }
     });
+}
 
 // --- 自動抓取與分析功能 ---
 
