@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
 from perplexity import Perplexity
+import glob
 
 load_dotenv()
 
@@ -39,7 +40,7 @@ def search_with_perplexity(query):
     """使用 Perplexity 搜尋"""
     try:
         perplexity_client = Perplexity(api_key=os.environ.get("PERPLEXITY_API_KEY"))
-        prompt = f"提供關於「{query}」的2個可靠資訊來源網址。僅輸出JSON格式：{{\"urls\": [\"url1\", \"url2\"]}}"
+        prompt = f"提供關於「{query}」的1個可靠資訊來源網址。僅輸出JSON格式：{{\"urls\": [\"url1\", \"url2\"]}}"
         
         response = perplexity_client.chat.completions.create(
             model="sonar",
@@ -60,8 +61,8 @@ def find_alternative_url(company, year, evidence_summary, original_url):
     search_query = f"{company} {year} ESG {evidence_summary[:50]}"
     
     print(f"  🔍 搜尋替代 URL: {search_query}")
-    
-    
+
+
     # 備援：Perplexity搜尋新聞
     pplx_urls = search_with_perplexity(search_query)
     for url in pplx_urls:
@@ -101,22 +102,19 @@ def process_json_file(input_file, output_file):
         if verification["is_valid"]:
             print(f"  ✅ URL 有效 (狀態碼: {verification['status_code']})")
             verified_count += 1
-            item["url_verification_status"] = "valid"
-            item["url_verification_date"] = "2026-01-06"
+            item["is_verified"] = "True"
         else:
             print(f"  ❌ URL 失效，開始尋找替代...")
             new_url = find_alternative_url(company, year, evidence, url)
             
             if new_url != url:
                 item["external_evidence_url"] = new_url
-                item["url_verification_status"] = "updated"
-                item["original_url"] = url
+                item["is_verified"] = "True"
                 updated_count += 1
-                print(f"  🔄 已更新為新 URL")
+                print(f" 🔄 已更新為新 URL")
             else:
-                item["url_verification_status"] = "failed"
+                item["is_verified"] = "Failed"
             
-            item["url_verification_date"] = "2026-01-06"
         
         print()
     
@@ -132,9 +130,40 @@ def process_json_file(input_file, output_file):
     print(f"  - 失敗: {total - verified_count - updated_count} 筆")
     print(f"📁 輸出檔案: {output_file}")
 
+def get_latest_file(folder_path, extension=".json"):
+    """自動偵測資料夾中最新的 JSON 檔案"""
+    files = glob.glob(os.path.join(folder_path, f"*{extension}"))
+    return max(files, key=os.path.getmtime) if files else None
+
 if __name__ == "__main__":
-    input_file = "1229亞泥P2_test1.json"
-    output_file = "1229亞泥P2_test1_verified.json"
-    
-    # 執行驗證與更新
-    process_json_file(input_file, output_file)
+    # 1. 路徑設定
+    INPUT_FOLDER = "./temp_data/prompt2_json"
+    OUTPUT_FOLDER = "./temp_data/prompt3_json"
+    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
+    # 2. 抓取最新檔案
+    latest_path = get_latest_file(INPUT_FOLDER)
+
+    if latest_path:
+        # 3. 讀取內容以獲取動態命名資訊
+        try:
+            with open(latest_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # 取得公司與年份 (移除空格以防檔名出錯)
+            first_item = data[0] if isinstance(data, list) else data
+            company = str(first_item.get("company", "Unknown")).replace(" ", "")
+            year = str(first_item.get("year", "Unknown")).replace(" ", "")
+
+            # 4. 精簡定義輸出路徑
+            # 直接在呼叫函式時組合路徑與檔名
+            output_file = f"{OUTPUT_FOLDER}/{year}_{company}_P3.json"
+
+            # print(f"📖 讀取最新檔: {latest_path}")
+            # print(f"🚀 準備輸出至: {output_file}")
+
+            # 5. 執行核心驗證邏輯
+            process_json_file(latest_path, output_file)
+
+        except Exception as e:
+            print(f"❌ 解析檔案內容時發生錯誤: {e}")
