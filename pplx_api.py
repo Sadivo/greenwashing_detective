@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from googleapiclient.discovery import build
 from perplexity import Perplexity
 import glob
+import time
 
 load_dotenv()
 
@@ -40,13 +41,16 @@ def search_with_perplexity(query):
     """使用 Perplexity 搜尋"""
     try:
         perplexity_client = Perplexity(api_key=os.environ.get("PERPLEXITY_API_KEY"))
-        prompt = f"提供關於「{query}」的1個可靠資訊來源網址。僅輸出JSON格式：{{\"urls\": [\"url1\", \"url2\"]}}"
+        prompt = f"提供關於「{query}」的1個可靠資訊來源網址。僅輸出JSON格式：{{\"urls\": [\"url1\"]}}"
         
         response = perplexity_client.chat.completions.create(
             model="sonar",
             messages=[{"role": "user", "content": prompt}]
         )
         
+        usage = response.usage  # Access prompt_tokens, completion_tokens, total_tokens
+        print(f"Perplexity API: Input={usage.prompt_tokens}, Output={usage.completion_tokens}, Total={usage.total_tokens}")
+
         content = response.choices[0].message.content
         clean_json = content.replace('```json', '').replace('```', '').strip()
         result = json.loads(clean_json)
@@ -115,12 +119,8 @@ def process_json_file(input_file, output_file):
             else:
                 item["is_verified"] = "Failed"
             
-        
         print()
     
-    # 儲存結果
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
     
     print(f"✅ 處理完成！")
     print(f"📊 統計結果:")
@@ -136,6 +136,9 @@ def get_latest_file(folder_path, extension=".json"):
     return max(files, key=os.path.getmtime) if files else None
 
 if __name__ == "__main__":
+    # (time-1) 記錄程式開始的最早時間點
+    script_start_time = time.perf_counter()
+
     # 1. 路徑設定
     INPUT_FOLDER = "./temp_data/prompt2_json"
     OUTPUT_FOLDER = "./temp_data/prompt3_json"
@@ -159,11 +162,12 @@ if __name__ == "__main__":
             # 直接在呼叫函式時組合路徑與檔名
             output_file = f"{OUTPUT_FOLDER}/{year}_{company}_P3.json"
 
-            # print(f"📖 讀取最新檔: {latest_path}")
-            # print(f"🚀 準備輸出至: {output_file}")
-
             # 5. 執行核心驗證邏輯
             process_json_file(latest_path, output_file)
 
         except Exception as e:
             print(f"❌ 解析檔案內容時發生錯誤: {e}")
+
+        # (time-2) 計算總耗時
+        total_duration = time.perf_counter() - script_start_time
+        print(f"⏱️ 執行總耗時: {total_duration:.2f} 秒")    
