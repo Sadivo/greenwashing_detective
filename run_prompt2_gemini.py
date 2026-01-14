@@ -1,5 +1,4 @@
-import json, os, re, tiktoken, time
-import pandas as pd
+import json, os, re
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -13,27 +12,17 @@ if not api_key:
 
 client = genai.Client(api_key=api_key)
 
-# ===== Token estimation utilities =====
-enc = tiktoken.get_encoding("cl100k_base")
 
-def estimate_tokens(text: str) -> int:
-    if not text:
-        return 0
-    return len(enc.encode(text))
-
-
-def process_esg_news_verification(input_json_path, news_json_path, msci_json_path, output_json_path):
+def process_esg_news_verification(input_json_path, news_json_path, output_json_path):
     """
     處理 ESG 新聞驗證
     
     Args:
         input_json_path: 原檔路徑 (2024_1102_p1.json)
         news_json_path: 驗證資料路徑 (2024_1102_news_results.json)
-        msci_json_path: MSCI 判斷標準路徑 (msci_flag.json)
         output_json_path: 輸出結果路徑
     """
-    total_start_time = time.perf_counter()
-    
+
     # 2. 讀取原檔
     try:
         with open(input_json_path, 'r', encoding='utf-8') as f:
@@ -46,24 +35,16 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
         print(f"❌ 錯誤：輸入檔案 {input_json_path} 格式並非正確的 JSON")
         return
 
-    # 3. 使用 pandas 讀取驗證資料
+    # 3. 直接讀取驗證資料
     try:
-        news_df = pd.read_json(news_json_path, encoding='utf-8')
-        print(f"✅ 成功讀取驗證資料：{len(news_df)} 筆新聞")
+        with open(news_json_path, 'r', encoding='utf-8') as f:
+            news_data = json.load(f)
+        print(f"✅ 成功讀取驗證資料：{len(news_data)} 筆新聞")
     except Exception as e:
         print(f"❌ 錯誤：讀取驗證資料失敗 - {e}")
         return
 
-    # 4. 使用 pandas 讀取 MSCI 判斷標準
-    try:
-        with open(msci_json_path, 'r', encoding='utf-8') as f:
-            msci_flag = json.load(f)
-        print(f"✅ 成功讀取 MSCI 判斷標準")
-    except Exception as e:
-        print(f"❌ 錯誤：讀取 MSCI 標準失敗 - {e}")
-        return
-
-    # 5. 準備 Prompt（將變數嵌入）
+    # 4. 準備 Prompt（將變數嵌入）
     prompt_template = f"""
 你將扮演ESG審查員，負責進行外部新聞比對與風險調整。
 
@@ -80,7 +61,7 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
 - key_word: 關鍵字
 
 【驗證資料說明】
-驗證資料包含 {len(news_df)} 筆新聞，欄位如下：
+驗證資料包含 {len(news_data)} 筆新聞，欄位如下：
 - news_id: 新聞編號
 - stock_code: 股票代號
 - company_name: 公司名稱
@@ -92,7 +73,29 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
 - publisher: 發布者
 
 【MSCI 風險旗號判斷標準】
-{json.dumps(msci_flag, ensure_ascii=False, indent=2)}
+  **Environment**: 
+    "Red": "大規模生態浩劫",
+    "Orange": "重大違規但可控",
+    "Yellow": "反覆發生的合規問題",
+    "Green": "無重大裁罰、符合當地法規，僅有零星排放超標紀錄"
+  ,
+  **HumanCapital**: 
+    "Red": "系統性人權侵犯",
+    "Orange": "結構性歧視或嚴重職災",
+    "Yellow": "單一勞資糾紛",
+    "Green": "零星的勞資爭議、一般性的離職率波動，或已解決的單一罰單"
+  ,
+  **SocialCapital**: 
+    "Red": "災難性產品風險或隱私崩潰",
+    "Orange": "重大產品召回或集體訴訟",
+    "Yellow": "局部性投訴",
+    "Green": "一般性的客戶服務投訴、零星的退貨問題"
+  ,
+  **LeadershipAndGovernance**: 
+    "Red": "核心系統崩潰或大規模貪腐",
+    "Orange": "重大治理缺陷",
+    "Yellow": "行政處分或單一案件",
+    "Green": "正常的董事會改選、微小的行政疏失補正"
 
 【處理邏輯】
 1. 風險調整邏輯依照上述 MSCI 標準
@@ -118,14 +121,14 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
 
 【輸出格式】
 輸出欄位要求 (嚴格執行)，不要添加任何前言、後語或說明文字。：
-**company**: {original_data[0]['company']},
-**year**: {original_data[0]['year']},
-**esg_category**: {original_data[0]['esg_category']},
-**sasb_topic**: {original_data[0]['sasb_topic']},
-**page_number**: {original_data[0]['page_number']},
-**report_claim**: {original_data[0]['report_claim']},
-**greenwashing_factor**: {original_data[0]['greenwashing_factor']},
-**risk_score**: {original_data[0]['risk_score']},
+**company**: 股票代號（來自原檔）,
+**year**: 年分（來自原檔）,
+**esg_category**: ESG分類（來自原檔）,
+**sasb_topic**: SASB主題（來自原檔）,
+**page_number**: 頁碼（來自原檔）,
+**report_claim**: 企業聲明（來自原檔）,
+**greenwashing_factor**: 漂綠風險因子（來自原檔）,
+**risk_score**: 原始風險分數（來自原檔）,
 **external_evidence**: 驗證資料標題或'無相關新聞證據',
 **external_evidence_url**: 驗證資料新聞連結或空字串,
 **consistency_status**: 一致/部分一致/部分一致/不一致(對應MSCI_flag),
@@ -143,16 +146,11 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
     {json.dumps(original_data, ensure_ascii=False, indent=2)}
 
     【驗證資料】
-    {news_df.to_json(orient='records', force_ascii=False, indent=2)}
+    {json.dumps(news_data, ensure_ascii=False, indent=2)}
     """
 
-    # ===== Token count (input) =====
-    input_token_est = estimate_tokens(prompt_template + user_input)
-    print(f"\n📊 估計輸入 Token 數：{input_token_est:,}")
-
-    # 7. 呼叫 Gemini API（啟用 grounding with google search）
-    print("\n🔄 正在呼叫 Gemini API 並檢索外部資訊，請稍候...")
-    api_start_time = time.perf_counter()
+    # 7. 呼叫 Gemini API
+    print("\n🔄 正在呼叫 Gemini API，請稍候...")
 
     try:
         response = client.models.generate_content(
@@ -168,65 +166,30 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
         print(f"❌ API 呼叫失敗: {e}")
         return
 
-    api_end_time = time.perf_counter()
-    api_elapsed = api_end_time - api_start_time
-    print(f"✅ Gemini API 呼叫完成，耗時 {api_elapsed:.2f} 秒")
+    print(f"✅ Gemini API 呼叫完成")
 
     # 8. 處理與儲存結果
     raw_text = response.text.strip()
 
-    # ===== Token count (output) =====
-    output_token_est = estimate_tokens(raw_text)
-    total_token_est = input_token_est + output_token_est
-
-    # 顯示原始回應前 500 字元用於調試
-    print(f"\n📄 API 原始回應（前 500 字元）：\n{raw_text[:500]}\n")
+    # 8. 處理與儲存結果 - 直接查找 JSON 陣列
+    print("\n🔍 正在解析 JSON 回應...")
     
     try:
         final_json = None
-        
-        # 方法 1: 檢測並移除 markdown 代碼塊標記（優先）
-        if raw_text.startswith("```json") or raw_text.startswith("```"):
-            print("🔍 檢測到 markdown 代碼塊格式，正在移除標記...")
-            # 移除開頭的 ```json 或 ```
-            clean_text = re.sub(r'^```(?:json)?\s*\n?', '', raw_text)
-            # 移除結尾的 ```
-            clean_text = re.sub(r'\n?```\s*$', '', clean_text)
+        all_arrays = re.findall(r'(\[.*\])', raw_text, re.DOTALL)
+        if all_arrays:
+            clean_json_str = all_arrays[0]
+            # 處理可能的多個陣列
+            if "][" in clean_json_str:
+                clean_json_str = clean_json_str.split("][")[0] + "]"
+            elif "] [" in clean_json_str:
+                clean_json_str = clean_json_str.split("] [")[0] + "]"
             
             try:
-                final_json = json.loads(clean_text.strip())
-                print("✅ 使用方法 1（移除 markdown 標記）成功解析")
+                final_json = json.loads(clean_json_str)
+                print("✅ JSON 解析成功")
             except json.JSONDecodeError as e:
-                print(f"⚠️  方法 1 失敗: {e}")
-        
-        # 方法 2: 使用正則表達式提取 JSON 代碼塊
-        if not final_json and "```" in raw_text:
-            print("🔍 嘗試使用正則表達式提取 JSON...")
-            json_match = re.search(r'```(?:json)?\s*(\[.*?\])\s*```', raw_text, re.DOTALL)
-            if json_match:
-                try:
-                    final_json = json.loads(json_match.group(1))
-                    print("✅ 使用方法 2（正則提取 markdown）成功解析")
-                except json.JSONDecodeError as e:
-                    print(f"⚠️  方法 2 失敗: {e}")
-        
-        # 方法 3: 直接查找 JSON 陣列（無 markdown 標記）
-        if not final_json:
-            print("🔍 嘗試直接查找 JSON 陣列...")
-            all_arrays = re.findall(r'(\[.*\])', raw_text, re.DOTALL)
-            if all_arrays:
-                clean_json_str = all_arrays[0]
-                # 處理可能的多個陣列
-                if "][" in clean_json_str:
-                    clean_json_str = clean_json_str.split("][")[0] + "]"
-                elif "] [" in clean_json_str:
-                    clean_json_str = clean_json_str.split("] [")[0] + "]"
-                
-                try:
-                    final_json = json.loads(clean_json_str)
-                    print("✅ 使用方法 3（直接提取陣列）成功解析")
-                except json.JSONDecodeError as e:
-                    print(f"⚠️  方法 3 失敗: {e}")
+                print(f"⚠️  JSON 解析失敗: {e}")
         
         # 儲存結果
         if final_json:
@@ -281,29 +244,13 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
             f.write(raw_text)
         print(f"💾 已將完整原始回應儲存至：{debug_path}")
 
-    # ===== TOKEN USAGE & TIME COST =====
-    total_end_time = time.perf_counter()
-    total_elapsed = total_end_time - total_start_time
-
-    print("\n" + "="*50)
-    print("📊 Token 使用統計")
-    print("="*50)
-    print(f"輸入 Token 數 : {input_token_est:,}")
-    print(f"輸出 Token 數 : {output_token_est:,}")
-    print(f"總計 Token 數 : {total_token_est:,}")
-    print("\n" + "="*50)
-    print("⏱️  執行時間統計")
-    print("="*50)
-    print(f"API 呼叫時間  : {api_elapsed:.2f} 秒")
-    print(f"總執行時間    : {total_elapsed:.2f} 秒")
-    print("="*50)
-
 
 if __name__ == "__main__":
+    year = "2024"
+    company = "1102"
     # 設定檔案路徑
-    input_path = './temp_data/prompt1_json/2024_1102_p1.json'
-    news_path = './news_search/news_output/2024_1102_news_results.json'
-    msci_path = './static/data/msci_flag.json'
-    output_path = './temp_data/prompt2_json/2024_1102_p2.json'
+    input_path = f'./temp_data/prompt1_json/{year}_{company}_p1.json'
+    news_path = f'./news_search/news_output/{year}_{company}_news_results.json'
+    output_path = f'./temp_data/prompt2_json/{year}_{company}_p2.json'
     
-    process_esg_news_verification(input_path, news_path, msci_path, output_path)
+    process_esg_news_verification(input_path, news_path, output_path)
