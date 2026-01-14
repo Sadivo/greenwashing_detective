@@ -188,6 +188,7 @@ class ESGReportAnalyzer:
 # =========================
 
 =======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 if __name__ == "__main__":
