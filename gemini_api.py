@@ -179,12 +179,15 @@ class ESGReportAnalyzer:
         except Exception as e:
             print(f"\n[ERROR] 分析過程發生錯誤: {e}")
 
+<<<<<<< Updated upstream
 
 
 # =========================
 # 程式進入點
 # =========================
 
+=======
+>>>>>>> Stashed changes
 if __name__ == "__main__":
     print("=== ESG 報告書自動分析系統 (Gemini 2.0 Flash) ===")
     
