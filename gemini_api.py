@@ -18,8 +18,13 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 class ESGReportAnalyzer:
     # ====== 設定檔與路徑 ======
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     INPUT_DIR = os.path.join(SCRIPT_DIR, 'ESG_Reports')
     OUTPUT_DIR = "output_json"
+=======
+    INPUT_DIR = os.path.join(SCRIPT_DIR, 'temp_data', 'esgReport')
+    OUTPUT_DIR = os.path.join(SCRIPT_DIR, 'temp_data', 'prompt1_json')
+>>>>>>> Stashed changes
 =======
     INPUT_DIR = os.path.join(SCRIPT_DIR, 'temp_data', 'esgReport')
     OUTPUT_DIR = os.path.join(SCRIPT_DIR, 'temp_data', 'prompt1_json')
@@ -185,11 +190,14 @@ class ESGReportAnalyzer:
             print(f"\n[ERROR] 分析過程發生錯誤: {e}")
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 
 # =========================
 # 程式進入點
 # =========================
 
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 if __name__ == "__main__":
