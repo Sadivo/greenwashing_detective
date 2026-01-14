@@ -1,34 +1,79 @@
+"""
+ESG 報告書自動分析模組
+
+提供使用 Gemini AI 分析 ESG 永續報告書的功能。
+
+主要類別：
+    ESGReportAnalyzer: 核心分析器，使用 Gemini 2.0 Flash 模型分析 PDF 報告書
+
+使用範例：
+    # 基本使用
+    from gemini_api import ESGReportAnalyzer
+    
+    analyzer = ESGReportAnalyzer(target_year=2024, target_company_id="2330")
+    analyzer.run()  # 產生分析結果 JSON
+"""
+
 import os
 import json
 import time
 import re
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 
 # ✅ 使用 Google 官方 GenAI SDK
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
-# 1. 載入環境變數
+# 載入環境變數
 load_dotenv()
 
 # 取得程式檔案所在的目錄
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-class ESGReportAnalyzer:
-    # ====== 設定檔與路徑 ======
 
+# =========================
+# 核心分析類別
+# =========================
+
+class ESGReportAnalyzer:
+    """
+    ESG 報告書分析器
+    
+    使用 Gemini 2.0 Flash AI 模型分析 ESG 永續報告書 PDF，
+    根據 SASB 框架與 Clarkson 理論進行評分，產生結構化的 JSON 分析結果。
+    
+    屬性：
+        INPUT_DIR: PDF 報告書輸入目錄
+        OUTPUT_DIR: JSON 分析結果輸出目錄
+        SASB_MAP_FILE: SASB 產業權重對照表路徑
+        MODEL_NAME: 使用的 Gemini 模型名稱
+    
+    使用範例：
+        analyzer = ESGReportAnalyzer(target_year=2024, target_company_id="2330")
+        analyzer.run()  # 執行分析並儲存結果
+    """
+    
+    # ====== 設定檔與路徑 ======
     INPUT_DIR = os.path.join(SCRIPT_DIR, 'temp_data', 'esgReport')
     OUTPUT_DIR = os.path.join(SCRIPT_DIR, 'temp_data', 'prompt1_json')
-
-    
-    # 修正 1: SASB_weightMap.json 的檔案路徑調整為 ./static/data/
     SASB_MAP_FILE = os.path.join(SCRIPT_DIR, 'static', 'data', 'SASB_weightMap.json')
     
     # ✅ 使用 Gemini 2.0 Flash
     MODEL_NAME = "models/gemini-2.0-flash" 
 
     def __init__(self, target_year: int, target_company_id: str):
+        """
+        初始化 ESG 報告書分析器
+        
+        Args:
+            target_year: 報告年份（例如：2024）
+            target_company_id: 公司代碼（例如："2330"）
+        
+        Raises:
+            RuntimeError: 若找不到 GEMINI_API_KEY 環境變數
+            FileNotFoundError: 若找不到符合條件的 PDF 檔案或 SASB 權重表
+        """
         # 取得 API Key
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
@@ -45,15 +90,21 @@ class ESGReportAnalyzer:
         self.pdf_path, self.pdf_filename = self._find_target_pdf()
         self.sasb_map_content = self._load_sasb_map()
 
-        # ====== 修正：檔名命名邏輯 ======
-        # 直接使用傳入的參數組合，確保格式統一為 "2024_2330_p1.json"
-        # 這樣就不會受到原始 PDF 檔案中「台積電_永續報告書」等中文字串的干擾
+        # 設定輸出檔名：格式為 "{年份}_{公司代碼}_p1.json"
         self.output_json_name = f"{self.target_year}_{self.target_company_id}_p1.json"
         
         print(f"[CONFIG] 輸出檔名已設定為: {self.output_json_name}")
 
-    def _find_target_pdf(self) -> (str, str):
-        """在 temp_data/esgReport 資料夾中搜尋符合 年份_代碼 的 PDF"""
+    def _find_target_pdf(self) -> Tuple[str, str]:
+        """
+        在輸入目錄中搜尋符合條件的 PDF 檔案
+        
+        Returns:
+            Tuple[str, str]: (完整檔案路徑, 檔案名稱)
+        
+        Raises:
+            FileNotFoundError: 若資料夾不存在或找不到符合條件的 PDF
+        """
         if not os.path.exists(self.INPUT_DIR):
             raise FileNotFoundError(f"資料夾不存在: {self.INPUT_DIR}")
         
@@ -68,14 +119,30 @@ class ESGReportAnalyzer:
         raise FileNotFoundError(f"❌ 找不到符合 {prefix} 的 PDF 檔。")
 
     def _load_sasb_map(self) -> str:
-        """讀取 SASB Weight Map JSON"""
+        """
+        讀取 SASB 產業權重對照表
+        
+        Returns:
+            str: SASB 權重表的 JSON 字串內容
+        
+        Raises:
+            FileNotFoundError: 若找不到 SASB 權重表檔案
+        """
         if not os.path.exists(self.SASB_MAP_FILE):
              raise FileNotFoundError(f"❌ 找不到 SASB 權重表檔案: {self.SASB_MAP_FILE}")
         with open(self.SASB_MAP_FILE, 'r', encoding='utf-8') as f:
             return f.read()
 
     def upload_file_to_gemini(self):
-        """將 PDF 上傳至 Gemini 伺服器"""
+        """
+        將 PDF 檔案上傳至 Gemini 伺服器
+        
+        Returns:
+            Gemini 檔案參考物件
+        
+        Raises:
+            RuntimeError: 若上傳失敗或檔案處理失敗
+        """
         print(f"[UPLOAD] 準備上傳: {self.pdf_filename} ...")
         safe_display_name = f"Report_{self.target_year}_{self.target_company_id}"
 
@@ -107,10 +174,35 @@ class ESGReportAnalyzer:
         return file_ref
 
     def run(self):
+        """
+        執行完整的 ESG 報告書分析流程
+        
+        流程：
+            1. 上傳 PDF 至 Gemini
+            2. 建構分析 Prompt
+            3. 呼叫 Gemini AI 模型進行分析
+            4. 解析並儲存 JSON 結果
+        
+        產生的 JSON 格式：
+            [
+                {
+                    "company_id": "2330",
+                    "year": "2024",
+                    "ESG_category": "E|S|G",
+                    "SASB_topic": "議題名稱",
+                    "page_number": "頁碼",
+                    "report_claim": "報告書原文摘錄",
+                    "greenwashing_factor": "中文漂綠風險分析",
+                    "risk_score": "0-4",
+                    "Internal_consistency": true|false
+                },
+                ...
+            ]
+        """
         # 1. 上傳 PDF
         uploaded_pdf = self.upload_file_to_gemini()
 
-        # 2. 建構 Prompt (修正：greenwashing_factor 強制輸出中文)
+        # 2. 建構 Prompt
         print(">>> 發送分析請求 (Gemini 2.0 Flash)...")
         
         prompt_text = f"""
@@ -146,7 +238,7 @@ class ESGReportAnalyzer:
 請直接輸出 JSON Array，不要包含 Markdown 標記。
 """
 
-        # 3. 呼叫模型 (修正：使用參數 temperature=0)
+        # 3. 呼叫模型
         try:
             response = self.client.models.generate_content(
                 model=self.MODEL_NAME,
@@ -164,10 +256,11 @@ class ESGReportAnalyzer:
             raw_json = response.text
             output_path = os.path.join(self.OUTPUT_DIR, self.output_json_name)
 
-            # 嘗試解析
+            # 嘗試解析 JSON
             try:
                 parsed_data = json.loads(raw_json)
             except json.JSONDecodeError:
+                # 若解析失敗，嘗試清除可能的 Markdown 標記
                 clean_text = re.sub(r"^```json|```$", "", raw_json.strip(), flags=re.MULTILINE).strip()
                 parsed_data = json.loads(clean_text)
             
@@ -182,31 +275,25 @@ class ESGReportAnalyzer:
             print(f"\n[ERROR] 分析過程發生錯誤: {e}")
 
 
-
 # =========================
-# 程式進入點
+# 測試用模擬函數（供 app.py 使用）
 # =========================
 
-
-def main():
-    scorer = ESGReportScorer()
-    scorer.score_report()
-
-
-# =========================
-# 自動抓取分析功能的接口（預留）
-# =========================
-def analyze_esg_report(pdf_path: str, year: int, company_code: str) -> dict:
+def analyze_esg_report_mock(pdf_path: str, year: int, company_code: str, company_name: str = '', industry: str = '') -> dict:
     """
-    分析 ESG 永續報告書並產生結構化資料（尚未實作）
+    模擬 AI 分析結果（測試用）
+    
+    此函數目前被 app.py 的自動抓取流程使用，產生模擬的 ESG 分析資料。
     
     Args:
-        pdf_path: PDF 檔案的絕對路徑
+        pdf_path: PDF 檔案路徑（目前未使用，保留供未來實作）
         year: 報告年份
         company_code: 公司代碼
+        company_name: 公司名稱（選填，若未提供則使用預設值）
+        industry: 產業類別（選填，若未提供則使用預設值）
     
     Returns:
-        dict: 包含 company_report 表所需的所有欄位
+        dict: 模擬的分析結果
         {
             'company_name': str,
             'industry': str,
@@ -228,26 +315,6 @@ def analyze_esg_report(pdf_path: str, year: int, company_code: str) -> dict:
                 ...
             ]
         }
-    """
-    # TODO: 實際 AI 分析邏輯
-    # 1. 使用 ESGReportScorer 或其他方式解析 PDF
-    # 2. 呼叫 Gemini API 進行分析
-    # 3. 整理成標準化格式回傳
-    raise NotImplementedError("AI 分析模組尚未實作，請使用 analyze_esg_report_mock() 進行測試")
-
-
-def analyze_esg_report_mock(pdf_path: str, year: int, company_code: str, company_name: str = '', industry: str = '') -> dict:
-    """
-    模擬 AI 分析結果（測試用）
-    
-    Args:
-        pdf_path: PDF 檔案路徑
-        year: 報告年份
-        company_code: 公司代碼
-        company_name: 公司名稱（選填，若未提供則使用預設值）
-        industry: 產業類別（選填，若未提供則使用預設值）
-    
-    回傳假資料以供測試整體流程
     """
     import random
     
@@ -306,7 +373,44 @@ def analyze_esg_report_mock(pdf_path: str, year: int, company_code: str, company
     }
 
 
-if __name__ == "__main__":
+# =========================
+# 預留接口（尚未實作）
+# =========================
+
+def analyze_esg_report(pdf_path: str, year: int, company_code: str) -> dict:
+    """
+    分析 ESG 永續報告書並產生結構化資料（尚未實作）
+    
+    此函數預計在未來實作，將調用 ESGReportAnalyzer 進行真實的 AI 分析。
+    
+    Args:
+        pdf_path: PDF 檔案的絕對路徑
+        year: 報告年份
+        company_code: 公司代碼
+    
+    Returns:
+        dict: 包含 company_report 表所需的所有欄位（格式同 analyze_esg_report_mock）
+    
+    Raises:
+        NotImplementedError: 此函數尚未實作
+    """
+    # TODO: 實際 AI 分析邏輯
+    # 1. 使用 ESGReportAnalyzer 進行分析
+    # 2. 將結果轉換為與 analyze_esg_report_mock 相同的格式
+    # 3. 回傳結果
+    raise NotImplementedError("AI 分析模組尚未實作，請使用 analyze_esg_report_mock() 進行測試")
+
+
+# =========================
+# 命令列執行入口
+# =========================
+
+def main():
+    """
+    命令列執行的主函數
+    
+    提供互動式界面，讓使用者輸入年份和公司代碼來執行分析。
+    """
     print("=== ESG 報告書自動分析系統 (Gemini 2.0 Flash) ===")
     
     t_year = input(f"請輸入年份 (預設 2024): ").strip() or "2024"
@@ -318,4 +422,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n❌ 程式執行中斷: {e}")
 
-    #請他回傳我到底哪些SASBtopic有資料
+
+if __name__ == "__main__":
+    main()

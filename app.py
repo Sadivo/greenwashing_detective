@@ -280,14 +280,58 @@ def query_company():
                 
                 pdf_path = pdf_path_or_error
                 
-                # Step 3: AI 分析（使用模擬版本，傳入真實的公司資料）
-                analysis_result = analyze_esg_report_mock(
-                    pdf_path, 
-                    year, 
-                    company_code,
-                    company_name=report_info.get('company_name', ''),
-                    industry=report_info.get('sector', '')
-                )
+               # Step 3a & 3b: 平行執行 Word Cloud 和 AI 分析
+                import threading
+                
+                # 儲存結果的變數
+                wordcloud_result = None
+                analysis_result = None
+                
+                def run_wordcloud():
+                    """Word Cloud 生成執行緒"""
+                    nonlocal wordcloud_result
+                    try:
+                        from word_cloud.word_cloud import generate_wordcloud
+                        wordcloud_result = generate_wordcloud(year, company_code, pdf_path, force_regenerate=False)
+                    except Exception as e:
+                        wordcloud_result = {'success': False, 'error': str(e)}
+                        print(f"⚠️ Word Cloud 生成錯誤: {e}")
+                
+                def run_ai_analysis():
+                    """AI 分析執行緒"""
+                    nonlocal analysis_result
+                    try:
+                        analysis_result = analyze_esg_report_mock(
+                            pdf_path, 
+                            year, 
+                            company_code,
+                            company_name=report_info.get('company_name', ''),
+                            industry=report_info.get('sector', '')
+                        )
+                    except Exception as e:
+                        raise  # AI 分析失敗則整個流程失敗
+                
+                # 建立並啟動執行緒
+                wordcloud_thread = threading.Thread(target=run_wordcloud, name="WordCloudThread")
+                ai_thread = threading.Thread(target=run_ai_analysis, name="AIAnalysisThread")
+                
+                print("🚀 啟動平行處理：Word Cloud 與 AI 分析")
+                wordcloud_thread.start()
+                ai_thread.start()
+                
+                # 等待完成
+                wordcloud_thread.join(timeout=120)  # Word Cloud 最多等 2 分鐘
+                ai_thread.join()  # AI 分析必須完成
+                
+                # 處理 Word Cloud 結果（非必要，失敗不影響主流程）
+                if wordcloud_result and wordcloud_result.get('success'):
+                    if wordcloud_result.get('skipped'):
+                        print(f"ℹ️ Word Cloud 已存在，跳過生成")
+                    else:
+                        print(f"✅ Word Cloud 生成成功: {wordcloud_result.get('word_count', 0)} 個關鍵字")
+                else:
+                    error_msg = wordcloud_result.get('error') if wordcloud_result else 'timeout'
+                    print(f"⚠️ Word Cloud 生成失敗: {error_msg}（不影響主流程）")
                 
                 # Step 4: 插入分析結果至資料庫
                 insert_success, insert_msg = insert_analysis_results(
