@@ -323,7 +323,7 @@ def query_company():
                 wordcloud_thread.join(timeout=120)  # Word Cloud 最多等 2 分鐘
                 ai_thread.join()  # AI 分析必須完成
                 
-                # 處理 Word Cloud 結果（非必要，失敗不影響主流程）
+                # 處理 Word Cloud 結果（非必要，失敗不影响主流程）
                 if wordcloud_result and wordcloud_result.get('success'):
                     if wordcloud_result.get('skipped'):
                         print(f"ℹ️ Word Cloud 已存在，跳過生成")
@@ -333,8 +333,32 @@ def query_company():
                     error_msg = wordcloud_result.get('error') if wordcloud_result else 'timeout'
                     print(f"⚠️ Word Cloud 生成失敗: {error_msg}（不影響主流程）")
                 
-                # Step 4: 插入分析結果至資料庫
+                # Step 4: 新聞爬蟲驗證 ✨ NEW
+                print("\n--- Step 4: 新聞爬蟲驗證 ---")
+                try:
+                    from news_search.crawler_news import search_news_for_report
+                    
+                    news_result = search_news_for_report(
+                        year=year,
+                        company_code=company_code,
+                        force_regenerate=False
+                    )
+                    
+                    if news_result['success']:
+                        if news_result.get('skipped'):
+                            print(f"ℹ️ 新聞資料已存在，跳過生成")
+                        else:
+                            print(f"✅ 新聞爬蟲完成：{news_result['news_count']} 則新聞")
+                            print(f"   處理項目: {news_result['processed_items']}")
+                            print(f"   失敗項目: {news_result['failed_items']}")
+                    else:
+                        print(f"⚠️ 新聞爬蟲失敗：{news_result.get('error')}（不影響主流程）")
+                except Exception as e:
+                    print(f"⚠️ 新聞爬蟲發生錯誤: {str(e)}（不影響主流程）")
+                
+                # Step 5: 插入分析結果至資料庫
                 insert_success, insert_msg = insert_analysis_results(
+
                     esg_id=esg_id,
                     company_name=analysis_result['company_name'],
                     industry=analysis_result['industry'],
@@ -350,10 +374,10 @@ def query_company():
                         'esg_id': esg_id
                     }), 500
                 
-                # Step 5: 更新狀態為 completed
+                # Step 6: 更新狀態為 completed
                 update_analysis_status(esg_id, 'completed')
                 
-                # Step 6: 查詢完整資料並回傳
+                # Step 7: 查詢完整資料並回傳
                 final_result = query_company_data(year, company_code)
                 
                 if final_result['status'] == 'completed':
