@@ -180,12 +180,14 @@ class ESGReportAnalyzer:
             print(f"\n[ERROR] 分析過程發生錯誤: {e}")
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 
 
 # =========================
 # 程式進入點
 # =========================
 
+=======
 =======
 >>>>>>> Stashed changes
 if __name__ == "__main__":
