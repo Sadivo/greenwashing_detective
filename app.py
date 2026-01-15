@@ -356,7 +356,33 @@ def query_company():
                 except Exception as e:
                     print(f"⚠️ 新聞爬蟲發生錯誤: {str(e)}（不影響主流程）")
                 
-                # Step 5: 插入分析結果至資料庫
+                # Step 5: AI 驗證與評分調整 ✨ NEW
+                print("\n--- Step 5: AI 驗證與評分調整 ---")
+                try:
+                    from run_prompt2_gemini import verify_esg_with_news
+                    
+                    verify_result = verify_esg_with_news(
+                        year=year,
+                        company_code=company_code,
+                        force_regenerate=False
+                    )
+                    
+                    if verify_result['success']:
+                        if verify_result.get('skipped'):
+                            print(f"ℹ️ AI 驗證結果已存在，跳過生成")
+                        else:
+                            stats = verify_result['statistics']
+                            print(f"✅ AI 驗證完成")
+                            print(f"   輸出檔案: {verify_result['output_path']}")
+                            print(f"   處理項目: {stats['processed_items']}")
+                            print(f"   Token 使用: {stats['total_tokens']:,} (輸入: {stats['input_tokens']:,}, 輸出: {stats['output_tokens']:,})")
+                            print(f"   執行時間: {stats['api_time']:.2f} 秒")
+                    else:
+                        print(f"⚠️ AI 驗證失敗：{verify_result.get('error')}（不影響主流程）")
+                except Exception as e:
+                    print(f"⚠️ AI 驗證發生錯誤: {str(e)}（不影響主流程）")
+                
+                # Step 6: 插入分析結果至資料庫
                 insert_success, insert_msg = insert_analysis_results(
 
                     esg_id=esg_id,
@@ -374,10 +400,10 @@ def query_company():
                         'esg_id': esg_id
                     }), 500
                 
-                # Step 6: 更新狀態為 completed
+                # Step 7: 更新狀態為 completed
                 update_analysis_status(esg_id, 'completed')
                 
-                # Step 7: 查詢完整資料並回傳
+                # Step 8: 查詢完整資料並回傳
                 final_result = query_company_data(year, company_code)
                 
                 if final_result['status'] == 'completed':
