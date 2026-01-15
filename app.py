@@ -382,7 +382,36 @@ def query_company():
                 except Exception as e:
                     print(f"⚠️ AI 驗證發生錯誤: {str(e)}（不影響主流程）")
                 
-                # Step 6: 插入分析結果至資料庫
+                # Step 6: 來源可靠度驗證 ✨ NEW
+                print("\n--- Step 6: 來源可靠度驗證 ---")
+                try:
+                    from pplx_api import verify_evidence_sources
+                    
+                    pplx_result = verify_evidence_sources(
+                        year=year,
+                        company_code=company_code,
+                        force_regenerate=False
+                    )
+                    
+                    if pplx_result['success']:
+                        if pplx_result.get('skipped'):
+                            print(f"ℹ️ 來源驗證結果已存在，跳過生成")
+                        else:
+                            stats = pplx_result['statistics']
+                            print(f"✅ 來源驗證完成")
+                            print(f"   輸出檔案: {pplx_result['output_path']}")
+                            print(f"   處理項目: {stats['processed_items']}")
+                            print(f"   有效 URL: {stats['verified_count']}")
+                            print(f"   更新 URL: {stats['updated_count']}")
+                            print(f"   失敗項目: {stats['failed_count']}")
+                            print(f"   Perplexity 調用: {stats['perplexity_calls']} 次")
+                            print(f"   執行時間: {stats['execution_time']:.2f} 秒")
+                    else:
+                        print(f"⚠️ 來源驗證失敗：{pplx_result.get('error')}（不影響主流程）")
+                except Exception as e:
+                    print(f"⚠️ 來源驗證發生錯誤: {str(e)}（不影響主流程）")
+                
+                # Step 7: 插入分析結果至資料庫
                 insert_success, insert_msg = insert_analysis_results(
 
                     esg_id=esg_id,
@@ -400,10 +429,10 @@ def query_company():
                         'esg_id': esg_id
                     }), 500
                 
-                # Step 7: 更新狀態為 completed
+                # Step 8: 更新狀態為 completed
                 update_analysis_status(esg_id, 'completed')
                 
-                # Step 8: 查詢完整資料並回傳
+                # Step 9: 查詢完整資料並回傳
                 final_result = query_company_data(year, company_code)
                 
                 if final_result['status'] == 'completed':
