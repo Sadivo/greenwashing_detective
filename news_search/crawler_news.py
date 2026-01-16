@@ -35,6 +35,13 @@ RETRY_DELAY = 5  # 秒
 SEARCH_DELAY = 2  # 每次搜尋後延遲
 MAX_RESULTS_PER_TOPIC = 10
 
+# 多地區搜索配置
+SEARCH_REGIONS = [
+    {'language': 'zh-TW', 'country': 'TW', 'name': '台灣'},
+    {'language': 'en', 'country': 'US', 'name': '美國'},
+    {'language': 'en', 'country': 'GB', 'name': '英國'},
+]
+
 
 # === 輔助函數 ===
 
@@ -272,12 +279,9 @@ def search_news_for_report(
             key_word = f"{company_name} {topic}"
             print(f"  🔧 使用基本組合: {key_word}")
         
-        # 設定 GNews 時間範圍
+        # 設定搜尋年份
         try:
             target_year = int(year_str)
-            google_news = GNews(language='zh-TW', country='TW', max_results=MAX_RESULTS_PER_TOPIC)
-            google_news.start_date = (target_year, 1, 1)
-            google_news.end_date = (target_year, 12, 31)
             print(f"  📅 搜索範圍: {target_year}/01/01 ~ {target_year}/12/31")
         except ValueError:
             print(f"  ⚠️ 日期格式錯誤，跳過此筆")
@@ -285,76 +289,88 @@ def search_news_for_report(
             failure_details.append({'topic': topic, 'reason': '日期格式錯誤'})
             continue
         
-        # === 搜尋策略（三階段） ===
+        # === 搜尋策略（擴大至多地區） ===
         news_results = None
         final_query = key_word
+        found_count = 0
         
         try:
-            # 策略 1: 使用完整關鍵字
-            print(f"  🔍 搜尋策略1: {key_word}")
-            for attempt in range(MAX_RETRIES):
-                try:
-                    news_results = google_news.get_news(key_word)
-                    break
-                except Exception as e:
-                    if attempt < MAX_RETRIES - 1:
-                        print(f"  ⚠️ 搜尋失敗，{RETRY_DELAY}秒後重試...")
-                        time.sleep(RETRY_DELAY)
-                    else:
-                        raise e
-            
-            # 策略 2: 簡化關鍵字（取前3個詞）
-            if not news_results or len(news_results) < 3:
-                key_words_list = key_word.split()
-                if len(key_words_list) >= 3:
-                    query2 = ' '.join(key_words_list[:3])
-                    print(f"  🔍 搜尋策略2: {query2}")
-                    news_results2 = google_news.get_news(query2)
-                    if news_results2 and len(news_results2) > len(news_results or []):
-                        news_results = news_results2
-                        final_query = query2
-            
-            # 策略 3: 公司名稱 + 主題
-            if not news_results or len(news_results) < 2:
-                query3 = f"{company_name} {topic}"
-                print(f"  🔍 搜尋策略3: {query3}")
-                news_results3 = google_news.get_news(query3)
-                if news_results3 and len(news_results3) > len(news_results or []):
-                    news_results = news_results3
-                    final_query = query3
-            
-            # 過濾新聞
-            if news_results:
-                print(f"  📰 共找到 {len(news_results)} 則新聞，開始過濾...")
-                filtered_count = 0
-                filtered_out_count = 0
+            # 對多個地區進行搜尋並合併結果
+            for region in SEARCH_REGIONS:
+                # 設定 GNews
+                google_news = GNews(
+                    language=region['language'], 
+                    country=region['country'], 
+                    max_results=MAX_RESULTS_PER_TOPIC
+                )
+                google_news.start_date = (target_year, 1, 1)
+                google_news.end_date = (target_year, 12, 31)
                 
-                for news in news_results:
-                    published_date = news.get('published date', '')
-                    
-                    if _is_date_in_year(published_date, target_year):
-                        all_news_articles.append({
-                            "news_id": news_id_counter,
-                            "stock_code": stock_code,
-                            "company_name": company_name,
-                            "sasb_topic": topic,
-                            "search_query": final_query,
-                            "title": news.get('title', ''),
-                            "url": news.get('url', ''),
-                            "published_date": published_date,
-                            "publisher": news.get('publisher', {}).get('title', '') if isinstance(news.get('publisher'), dict) else ''
-                        })
-                        news_id_counter += 1
-                        filtered_count += 1
-                    else:
-                        filtered_out_count += 1
+                region_results = None
                 
-                if filtered_count > 0:
-                    print(f"  ✓ 保留 {filtered_count} 則 {target_year} 年新聞（排除 {filtered_out_count} 則）")
-                else:
-                    print(f"  ⚠️ 找到 {len(news_results)} 則新聞，但全部不在 {target_year} 年範圍內")
+                # 策略 1: 使用完整關鍵字
+                for attempt in range(MAX_RETRIES):
+                    try:
+                        region_results = google_news.get_news(key_word)
+                        break
+                    except Exception as e:
+                        if attempt < MAX_RETRIES - 1:
+                            time.sleep(RETRY_DELAY)
+                        else:
+                            # 靜默處理錯誤，繼續下一個地區
+                            pass
+                
+                # 策略 2: 簡化關鍵字（取前3個詞）
+                if not region_results or len(region_results) < 3:
+                    key_words_list = key_word.split()
+                    if len(key_words_list) >= 3:
+                        query2 = ' '.join(key_words_list[:3])
+                        try:
+                            results2 = google_news.get_news(query2)
+                            if results2 and len(results2) > len(region_results or []):
+                                region_results = results2
+                                final_query = query2
+                        except:
+                            pass
+                
+                # 策略 3: 公司名稱 + 主題
+                if not region_results or len(region_results) < 2:
+                    query3 = f"{company_name} {topic}"
+                    try:
+                        results3 = google_news.get_news(query3)
+                        if results3 and len(results3) > len(region_results or []):
+                            region_results = results3
+                            final_query = query3
+                    except:
+                        pass
+                
+                # 收集此地區的結果
+                if region_results:
+                    for news in region_results:
+                        published_date = news.get('published date', '')
+                        if _is_date_in_year(published_date, target_year):
+                            all_news_articles.append({
+                                "news_id": news_id_counter,
+                                "stock_code": stock_code,
+                                "company_name": company_name,
+                                "sasb_topic": topic,
+                                "search_query": final_query,
+                                "title": news.get('title', ''),
+                                "url": news.get('url', ''),
+                                "published_date": published_date,
+                                "publisher": news.get('publisher', {}).get('title', '') if isinstance(news.get('publisher'), dict) else ''
+                            })
+                            news_id_counter += 1
+                            found_count += 1
+                
+                # 避免請求太快
+                time.sleep(SEARCH_DELAY)
+            
+            # 統一輸出結果
+            if found_count > 0:
+                print(f"  ✓ 找到 {found_count} 則 {target_year} 年相關新聞")
             else:
-                print(f"  ❌ 無相關新聞")
+                print(f"  ⚠️ 無相關新聞")
                 
         except Exception as e:
             print(f"  ❌ 搜尋失敗: {str(e)}")
