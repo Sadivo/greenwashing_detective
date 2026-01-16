@@ -13,7 +13,7 @@ if not api_key:
 client = genai.Client(api_key=api_key)
 
 
-def process_esg_news_verification(input_json_path, news_json_path, output_json_path):
+def process_esg_news_verification(input_json_path, news_json_path, msci_json_path, output_json_path):
     """
     處理 ESG 新聞驗證
     
