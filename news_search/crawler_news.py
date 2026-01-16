@@ -249,8 +249,8 @@ def search_news_for_report(
     
     for idx, item in enumerate(p1_data_list, 1):
         # 取得基本資訊
-        stock_code = item.get("company", company_code)
-        company_name = stock_map.get(stock_code, stock_code)
+        company_name = item.get("company", "")  # 現在直接是公司名稱
+        stock_code = item.get("company_id", company_code)  # 從 company_id 取得代碼
         topic = item.get("sasb_topic", "")
         year_str = item.get("year", str(year))
         

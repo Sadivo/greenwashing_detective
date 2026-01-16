@@ -215,8 +215,8 @@ def insert_analysis_results(esg_id, company_name, industry, url, analysis_items)
                             esg_id,  # 儲存 company 的 ESG_id（如 20242330）
                             company_code,
                             year,
-                            item.get('ESG_category', ''),
-                            item.get('SASB_topic', ''),
+                            item.get('esg_category', ''),
+                            item.get('sasb_topic', ''),
                             item.get('page_number', ''),
                             item.get('report_claim', ''),
                             item.get('greenwashing_factor', ''),
@@ -224,7 +224,7 @@ def insert_analysis_results(esg_id, company_name, industry, url, analysis_items)
                             item.get('external_evidence', ''),
                             item.get('external_evidence_url', ''),
                             item.get('consistency_status', ''),
-                            item.get('MSCI_flag', ''),
+                            item.get('msci_flag', ''),
                             item.get('adjustment_score', 0.0),
                             is_verified
                         ))

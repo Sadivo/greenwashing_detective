@@ -62,13 +62,14 @@ class ESGReportAnalyzer:
     # ✅ 使用 Gemini 2.0 Flash
     MODEL_NAME = "models/gemini-2.0-flash" 
 
-    def __init__(self, target_year: int, target_company_id: str):
+    def __init__(self, target_year: int, target_company_id: str, company_name: str = ''):
         """
         初始化 ESG 報告書分析器
         
         Args:
             target_year: 報告年份（例如：2024）
             target_company_id: 公司代碼（例如："2330"）
+            company_name: 公司名稱（例如："台積電"）
         
         Raises:
             RuntimeError: 若找不到 GEMINI_API_KEY 環境變數
@@ -82,6 +83,7 @@ class ESGReportAnalyzer:
         self.client = genai.Client(api_key=api_key)
         self.target_year = target_year
         self.target_company_id = str(target_company_id).strip()
+        self.company_name = company_name or f'公司{target_company_id}'
 
         # 準備輸出目錄
         os.makedirs(self.OUTPUT_DIR, exist_ok=True)
@@ -186,15 +188,16 @@ class ESGReportAnalyzer:
         產生的 JSON 格式：
             [
                 {
+                    "company": "台積電",
                     "company_id": "2330",
                     "year": "2024",
-                    "ESG_category": "E|S|G",
-                    "SASB_topic": "議題名稱",
+                    "esg_category": "E|S|G",
+                    "sasb_topic": "議題名稱",
                     "page_number": "頁碼",
                     "report_claim": "報告書原文摘錄",
                     "greenwashing_factor": "中文漂綠風險分析",
                     "risk_score": "0-4",
-                    "Internal_consistency": true|false
+                    "internal_consistency": true|false
                 },
                 ...
             ]
@@ -224,15 +227,16 @@ class ESGReportAnalyzer:
 4. **特殊規則**：若議題屬於高權重 (2.0) 且報告書完全未提及，請填寫 "report_claim": "N/A", "risk_score": 1。
 
 **輸出欄位要求 (嚴格執行)：**
+- **company**: "{self.company_name}"
 - **company_id**: "{self.target_company_id}"
 - **year**: "{self.target_year}"
-- **ESG_category**: E / S / G
-- **SASB_topic**: 議題名稱
+- **esg_category**: E / S / G
+- **sasb_topic**: 議題名稱
 - **page_number**: 證據來源頁碼
 - **report_claim**: 針對該議題，僅選取「最具數據代表性」的一段話。必須完整摘錄報告書原文，不得改寫。
 - **greenwashing_factor**: (必須使用中文輸出) 基於 Clarkson 理論分析該數據的漏洞、漂綠疑慮或揭露風險。
 - **risk_score**: 0~4 分
-- **Internal_consistency**: (Boolean)
+- **internal_consistency**: (Boolean)
 
 **輸出格式**：
 請直接輸出 JSON Array，不要包含 Markdown 標記。
@@ -276,107 +280,7 @@ class ESGReportAnalyzer:
 
 
 # =========================
-# 測試用模擬函數（已棄用）
-# =========================
-
-def analyze_esg_report_mock(pdf_path: str, year: int, company_code: str, company_name: str = '', industry: str = '') -> dict:
-    """
-    ⚠️ 已棄用：請使用 analyze_esg_report() 進行真實 AI 分析
-    
-    模擬 AI 分析結果（測試用）
-    
-    此函數已被 analyze_esg_report() 取代，僅保留供向後相容。
-    
-    Args:
-        pdf_path: PDF 檔案路徑（目前未使用，保留供未來實作）
-        year: 報告年份
-        company_code: 公司代碼
-        company_name: 公司名稱（選填，若未提供則使用預設值）
-        industry: 產業類別（選填，若未提供則使用預設值）
-    
-    Returns:
-        dict: 模擬的分析結果
-        {
-            'company_name': str,
-            'industry': str,
-            'url': str,
-            'analysis_items': [
-                {
-                    'ESG_category': str,
-                    'SASB_topic': str,
-                    'page_number': str,
-                    'report_claim': str,
-                    'greenwashing_factor': str,
-                    'risk_score': str,
-                    'external_evidence': str,
-                    'external_evidence_url': str,
-                    'consistency_status': str,
-                    'MSCI_flag': str,
-                    'adjustment_score': float
-                },
-                ...
-            ]
-        }
-    """
-    import random
-    
-    # 若未傳入 company_name 或 industry，則使用預設值作為後備
-    if not company_name:
-        company_names = {
-            '2330': '台積電',
-            '1314': '中石化',
-            '1102': '亞洲水泥',
-            '2454': '聯發科',
-            '2317': '鴻海'
-        }
-        company_name = company_names.get(company_code, f'公司{company_code}')
-    
-    if not industry:
-        industries = {
-            '2330': '半導體業',
-            '1314': '油電燃氣業',
-            '1102': '水泥工業',
-            '2454': '半導體業',
-            '2317': '電腦及週邊設備業'
-        }
-        industry = industries.get(company_code, '其他')
-    
-    # 模擬分析項目（2-4 筆）
-    sasb_topics = ['溫室氣體排放', '水資源與廢水處理管理', '員工健康與安全', '商業道德', '空氣品質', '廢棄物與有害物質管理']
-    categories = ['E', 'S', 'G']
-    
-    num_items = random.randint(2, 4)
-    analysis_items = []
-    
-    for i in range(num_items):
-        category = random.choice(categories)
-        topic = random.choice(sasb_topics)
-        risk = random.randint(2, 4)
-        
-        analysis_items.append({
-            'ESG_category': category,
-            'SASB_topic': topic,
-            'page_number': str(random.randint(10, 80)),
-            'report_claim': f'承諾在 {topic} 方面達成目標，並持續改善相關指標。',
-            'greenwashing_factor': '' if risk >= 3 else '缺乏具體數據',
-            'risk_score': str(risk),
-            'external_evidence': '已通過第三方驗證' if risk == 4 else '',
-            'external_evidence_url': '',
-            'consistency_status': '一致' if risk >= 3 else '待確認',
-            'MSCI_flag': random.choice(['AAA', 'AA', 'A', 'BBB']),
-            'adjustment_score': 0.0 if risk >= 3 else round(random.uniform(0.5, 1.5), 2)
-        })
-    
-    return {
-        'company_name': company_name,
-        'industry': industry,
-        'url': f'https://esg.tw/{company_code}',  # 縮短 URL 避免超出欄位長度
-        'analysis_items': analysis_items
-    }
-
-
-# =========================
-# 預留接口（尚未實作）
+# 主要分析接口
 # =========================
 
 def analyze_esg_report(pdf_path: str, year: int, company_code: str, company_name: str = '', industry: str = '') -> dict:
@@ -414,7 +318,8 @@ def analyze_esg_report(pdf_path: str, year: int, company_code: str, company_name
         # 1. 初始化分析器
         analyzer = ESGReportAnalyzer(
             target_year=int(year),
-            target_company_id=str(company_code)
+            target_company_id=str(company_code),
+            company_name=company_name
         )
         
         # 2. 執行 AI 分析（會產生 P1 JSON 檔案）

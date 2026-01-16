@@ -80,7 +80,8 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
 
 【原檔說明】
 原檔為該公司永續報告書的聲明與風險分數，包含以下欄位：
-- company: 股票代號
+- company: 公司名稱（例如："亞泥"）
+- company_id: 公司代碼（例如："1102"）
 - year: 年分
 - esg_category: ESG分類 (E/S/G)
 - sasb_topic: SASB主題
@@ -124,18 +125,20 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
   * consistency_status: "一致"
   * external_evidence: "無相關新聞證據"
   * external_evidence_url: ""
-  * MSCI_flag: "Green"
+  * msci_flag: "Green"
   * adjustment_score: (維持原 risk_score)
 
 【輸出格式】
 輸出欄位要求 (嚴格執行)，不要添加任何前言、後語或說明文字。
 
 重要：請保持原檔欄位名稱不變，特別是：
-- **company** 必須維持原檔的股票代號格式（例如 "1101"），不要轉換為公司名稱
+- **company** 必須維持原檔的公司名稱格式（例如 "亞泥"），不要轉換為代碼
+- **company_id** 必須維持原檔的公司代碼（例如 "1102"）
 - **report_claim** 欄位名稱維持不變，不要改為 disclosure_claim
 
 輸出範例：
-**company**: {original_data[0]['company']},  # 必須是代號，例如 "1101"
+**company**: {original_data[0]['company']},  # 必須是名稱，例如 "亞泥"
+**company_id**: {original_data[0]['company_id']},  # 必須是代號，例如 "1102"
 **year**: {original_data[0]['year']},
 **esg_category**: {original_data[0]['esg_category']},
 **sasb_topic**: {original_data[0]['sasb_topic']},
@@ -146,7 +149,7 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
 **external_evidence**: 驗證資料標題或'無相關新聞證據',
 **external_evidence_url**: 驗證資料新聞連結或空字串,
 **consistency_status**: 一致/部分符合/不一致,
-**MSCI_flag**: Green/Yellow/Orange/Red,
+**msci_flag**: Green/Yellow/Orange/Red,
 **adjustment_score**: 調整後分數（最低為0）
 
 
