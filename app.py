@@ -396,7 +396,7 @@ def query_company():
                     verify_result = verify_esg_with_news(
                         year=year,
                         company_code=company_code,
-                        force_regenerate=False
+                        force_regenerate=True
                     )
                     
                     if verify_result['success']:
@@ -423,7 +423,7 @@ def query_company():
                     pplx_result = verify_evidence_sources(
                         year=year,
                         company_code=company_code,
-                        force_regenerate=False
+                        force_regenerate=True
                     )
                     
                     if pplx_result['success']:

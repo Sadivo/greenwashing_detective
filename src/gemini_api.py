@@ -314,6 +314,8 @@ class ESGReportAnalyzer:
 5. **漂綠因子分析(greenwashing_factor)**：(必須使用中文輸出) 格式為：[疑慮類型] 具體分析說明。
     - 若 internal_consistency 為 false，此處必須包含矛盾點對比。
     - 若 risk_score 低於 3 分，必須點出該議題在「透明度」或「量化程度」上的具體缺失。
+6. **一議題一條目**：每個 sasb_topic 在 JSON Array 中最多只能出現一次。
+7. **選擇原則**：若同一議題在報告中多處提及，必須選取「數據最完整、風險評分最高」的那一處，不得全部輸出。
 
 **輸出欄位要求 (嚴格執行)：**
 - **company**: "{self.company_name}"
