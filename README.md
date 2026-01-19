@@ -36,7 +36,7 @@
 5.  **完成：** 待管理員確認無誤後，即可進行合併（Merge）。
 
 ## 五、程式架構
-
+```text
 greenwashing_detective_project/
 ├── app.py                      # [主程式] Flask 網頁伺服器入口
 ├── app_llm_rich_test.py        # [測試] LLM 功能測試入口
@@ -70,15 +70,12 @@ greenwashing_detective_project/
 ├── templates/                  # [前端模板] HTML 檔案
 │   └── index.html              # 首頁介面
 │
-├── change/                     # [開發文件] 變更紀錄與規劃書
-│   ├── 整合規劃書.md            # 系統整合架構說明
-│   └── t1/ ~ t6/               # 各階段任務變更詳情
-│
 └── temp_data/                  # [暫存] 運行時產生的暫存檔 (通常不納入版控)
     ├── esgReport/              # 下載的 PDF 報告
     └── prompt*_json/           # LLM 分析結果緩存
+```
 
-# process flowchart
+## process flowchart
 
 ```mermaid
 flowchart TD
