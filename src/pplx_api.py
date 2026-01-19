@@ -23,11 +23,12 @@ def is_official_site(url, company_name):
     """
     簡單判斷網址是否為公司官網
     """
+    if not url: return False
     parsed_url = urlparse(url)
     domain = parsed_url.netloc.lower()
     # 移除公司名稱中的常見後綴以便比對
     clean_name = company_name.lower().replace("股份有限公司", "").replace("corp", "").replace("inc", "").strip()
-    
+
     # 判斷網域是否包含公司名稱關鍵字
     if clean_name in domain:
         return True
@@ -93,14 +94,11 @@ def find_alternative_url(company, year, evidence_summary, original_url):
     for url in pplx_urls:
         # 檢查是否為官方網站
         if is_official_site(url, company):
-            print(f"  ⚠️ 偵測到為官網，跳過: {url}")
             continue
             
         verification = verify_single_url(url)
         if verification["is_valid"]:
-            print(f"  ✅ Perplexity 找到有效第三方 URL: {url}")
             return url
-    
     return None # 若找不到則回傳 None
 
 def verify_evidence_sources(year, company_code, force_regenerate=False):
@@ -148,20 +146,17 @@ def verify_evidence_sources(year, company_code, force_regenerate=False):
         
         # 3. 檢查輸出檔案是否已存在
         if os.path.exists(output_file) and not force_regenerate:
-            return {'success': True, 'message': '來源驗證結果已存在', 'output_path': output_file, 'skipped': True, 'statistics': {'execution_time': time.perf_counter() - start_time}}
+            return {'success': True, 'message': '來源驗證結果已存在', 'output_path': output_file, 'skipped': True}
         
         # 4. 讀取 P2 JSON
         print(f"📖 讀取檔案: {input_file}")
         with open(input_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
-        processed_data = [] # 用於存儲有效的結果
+        processed_data = []
         verified_count = 0
         updated_count = 0
         failed_count = 0
-        perplexity_calls = 0
-        
-        print(f"\n開始驗證資料...\n")
         
         # 5. 逐筆驗證 URL
         for idx, item in enumerate(data, 1):
@@ -169,15 +164,17 @@ def verify_evidence_sources(year, company_code, force_regenerate=False):
             company = item.get("company", "")
             year_str = item.get("year", "")
             evidence = item.get("external_evidence", "")
-            
-            # --- 需求 1: 沒網址直接跳過 ---
+
+            # --- 需求處理：如果沒有網址，標註並直接加入結果，不尋找替代 ---
             if not url:
-                print(f"[{idx}] ⏭️ 項目無網址，直接跳過")
+                print(f"[{idx}] 項目無網址，保留原始內容")
+                item["is_verified"] = "False"
+                processed_data.append(item)
                 continue
 
-            print(f"[{idx}] 處理: {company} {year_str} - {item.get('esg_category')}")
+            print(f"[{idx}] 處理: {company} {year_str}")
             
-            # 驗證原始 URL
+            # 驗證網址
             verification = verify_single_url(url)
             
             if verification["is_valid"]:
@@ -186,30 +183,32 @@ def verify_evidence_sources(year, company_code, force_regenerate=False):
                 item["is_verified"] = "True"
                 processed_data.append(item)
             else:
-                print(f"  ❌ URL 失效，尋找替代第三方來源...")
-                perplexity_calls += 1
+                print(f"  ❌ URL 失效，尋找替代來源...")
                 new_url = find_alternative_url(company, year_str, evidence, url)
                 
                 if new_url:
                     item["external_evidence_url"] = new_url
                     item["is_verified"] = "True"
                     updated_count += 1
-                    processed_data.append(item)
-                    print(f"  🔄 已更新為第三方 URL")
+                    print(f"  🔄 已更新為替代來源")
                 else:
+                    item["is_verified"] = "False"
                     failed_count += 1
-                    print(f"  ⚠️ 無法找到替代來源，此項不產出")
+                    print(f"  ⚠️ 無法找到替代來源，保留原樣")
+                
+                processed_data.append(item)
             
-        # 6. 寫入 P3 JSON (僅包含 processed_data)
+        # 6. 寫入 P3 JSON
         with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(processed_data, f, ensure_ascii=False, indent=2)
+            json.dump(processed_data, f, ensure_ascii=False, indent=2) 
         
         return {
             'success': True,
             'message': '來源驗證完成',
             'output_path': output_file,
             'statistics': {
-                'processed_items': len(processed_data),
+                'total_input': len(data),
+                'total_output': len(processed_data),
                 'verified_count': verified_count,
                 'updated_count': updated_count,
                 'failed_count': failed_count,
@@ -232,18 +231,22 @@ def process_json_file(input_file, output_file):
         evidence = item.get("external_evidence", "")
         
         if not url:
+            item["is_verified"] = "False"
+            processed_data.append(item)
             continue
             
         verification = verify_single_url(url)
         if verification["is_valid"]:
             item["is_verified"] = "True"
-            processed_data.append(item)
         else:
             new_url = find_alternative_url(company, year, evidence, url)
             if new_url:
                 item["external_evidence_url"] = new_url
                 item["is_verified"] = "True"
-                processed_data.append(item)
+            else:
+                item["is_verified"] = "False"
+        
+        processed_data.append(item)
     
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(processed_data, f, ensure_ascii=False, indent=2)
@@ -253,7 +256,7 @@ def get_latest_file(folder_path, extension=".json"):
     return max(files, key=os.path.getmtime) if files else None
 
 if __name__ == "__main__":
-    # (time-1) 記錄程式開始的最早時間點
+    # 記錄程式開始的最早時間點
     script_start_time = time.perf_counter()
 
     # 1. 路徑設定
@@ -276,7 +279,7 @@ if __name__ == "__main__":
             # 4. 精簡定義輸出路徑
             # 直接在呼叫函式時組合路徑與檔名
             output_file = f"{OUTPUT_FOLDER}/{year}_{company}_p3.json"
-            
+
             # 5. 執行核心驗證邏輯
             process_json_file(latest_path, output_file)
             print(f"⏱️ 執行總耗時: {time.perf_counter() - script_start_time:.2f} 秒")
