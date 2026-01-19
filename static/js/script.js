@@ -7,43 +7,56 @@ class RealProgressController {
         this.status = document.getElementById('progressStatus');
         this.progressBarFill = document.getElementById('progressBarFill');
         this.progressPercent = document.getElementById('progressPercent');
+        
+        // 🆕 新增：用於顯示後端 Log 的元素
+        // 假設您的 HTML 中有 <div id="progressLog"></div>
+        // this.logContainer = document.getElementById('progressLog'); 
+        
         this.esgId = null;
         this.pollInterval = null;
         this.pollCount = 0;
-        this.maxPollAttempts = 300; 
+        this.maxPollAttempts = 450; // 延長至 15 分鐘 (2s * 450)
     }
 
     show() {
         if (this.container) {
             this.container.style.display = 'block';
+            this.container.style.opacity = '1'; // 確保可見
             this.reset();
         }
     }
 
     hide() {
         if (this.container) {
-            this.container.style.display = 'none';
-            this.stopPolling();
+            // 使用淡出效果後隱藏
+            this.container.style.transition = 'opacity 1s ease';
+            this.container.style.opacity = '0';
+            setTimeout(() => {
+                this.container.style.display = 'none';
+                this.stopPolling();
+            }, 1000);
         }
     }
 
     reset() {
         this.pollCount = 0;
-        if (this.progressBarFill) this.progressBarFill.style.width = '0%';
+        if (this.progressBarFill) {
+            this.progressBarFill.style.width = '0%';
+            this.progressBarFill.style.transition = 'width 0.4s ease'; // 讓進度條跳動更平滑
+        }
         if (this.progressPercent) this.progressPercent.textContent = '0%';
         if (this.status) this.status.textContent = '正在啟動分析流程...';
+        if (this.logContainer) this.logContainer.innerHTML = ''; 
     }
 
     startPolling(esgId) {
         this.esgId = esgId;
         this.show();
-        
+
         // 每 2 秒查詢一次
         this.pollInterval = setInterval(() => {
             this.checkProgress();
         }, 2000);
-        
-        this.checkProgress();
     }
 
     stopPolling() {
@@ -64,30 +77,36 @@ class RealProgressController {
         }
 
         try {
-        const response = await fetch(`/api/check_progress/${this.esgId}`);
-        const data = await response.json();
-        
-        console.log("收到進度更新:", data); // 偵錯用
+            const response = await fetch(`/api/check_progress/${this.esgId}`);
+            const data = await response.json();
+            
+            // 🆕 需求 2: 讀取後端回傳的精確百分比 (data.progress)，優先讀取後端 analysis_progress 欄位的數值，達成 31, 32... 的流暢感。
+            // 如果後端沒給，則維持原本的階段性百分比
+            // let displayPercent = data.progress || this.getStagePercent(data.stage);
+            // let currentStage = data.stage || data.analysis_status; 
+            // let currentStatus = data.status; // 'completed' or 'processing'
+            // let latestLog = data.last_log || ""; // 🆕 需求 1: 讀取 Log
 
-        // 如果後端給的是 analysis_status，這裡就要改寫
-        const currentStage = data.stage || data.analysis_status; 
-        const currentStatus = data.status || (currentStage === 'completed' ? 'completed' : 'processing');
-
-        // 更新 UI
-        this.updateSteps(currentStage, currentStatus);
-        
-        if (currentStatus === 'completed') {
-            this.stopPolling();
-            // ...
+            // 更新 UI
+            this.updateUI(displayPercent, currentStage, latestLog);
+            
+            if (currentStatus === 'completed' || currentStage === 'completed') {
+                // this.status.textContent = '分析完成！即將顯示結果';
+                this.stopPolling();
+                
+                // 🆕 完成後停留 1.5 秒再隱藏進度條
+                setTimeout(() => {
+                    this.hide();
+                    this.fetchCompletedData(this.esgId);
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('進度查詢錯誤:', error);
         }
-    } catch (error) {
-        console.error('進度查詢錯誤:', error);
     }
-}
 
-    // 🆕 UI 邏輯
-    updateSteps(currentStage, status) {
-        // 定義階段對應的百分比
+    // 輔助：原本的階段對應百分比（作為保底）
+    getStagePercent(stage) {
         const stageProgressMap = {
             'stage1': 15,  // 下載PDF
             'stage2': 30,  // 平行執行 Word Cloud 和 AI 分析
@@ -97,40 +116,46 @@ class RealProgressController {
             'stage6': 90,  // 讀取 P3 JSON 並插入分析結果至資料庫
             'completed': 100
         };
+        return stageProgressMap[stage] || 5;
+    }
 
-        let targetPercent = stageProgressMap[currentStage] || 5;
-        
-        // 如果 status 已經是 completed，強迫到 100
-        if (status === 'completed') targetPercent = 100;
+    // 🆕 更新 UI
+    updateUI(percent, stage, log) {
+        // 1. 更新百分比與進度條 (需求 2: 漸進式)
+        // if (this.progressBarFill) this.progressBarFill.style.width = percent + '%';
+        // if (this.progressPercent) this.progressPercent.textContent = percent + '%';
 
-        // 更新進度條寬度與文字
-        if (this.progressBarFill) {
-            this.progressBarFill.style.width = targetPercent + '%';
-        }
-        if (this.progressPercent) {
-            this.progressPercent.textContent = targetPercent + '%';
-        }
-
-        // 根據不同階段更新狀態文字，會顯示在前端
+        // 2. 根據不同階段更新狀態文字，會顯示在前端
         const stageMessageMap = {
-            'stage1': ' 正在檢索並下載永續報告書',
-            'stage2': ' AI 正在分析報告',
-            'stage3': ' 正在比對企業的外部新聞',
-            'stage4': ' 根據新聞調整漂綠風險評分中',
-            'stage5': ' 再次驗證新聞',
-            'stage6': ' 即將分析完成...',
-            'completed': ' 分析完成！即將顯示結果'
+            'stage1': '正在檢索並下載永續報告書',
+            'stage2': 'AI 正在分析報告',
+            'stage3': '正在比對企業的外部新聞',
+            'stage4': '根據新聞調整漂綠風險評分中',
+            'stage5': '再次驗證新聞來源真實性',
+            'stage6': '資料彙整與存檔中',
+            'completed': '分析完成！即將顯示結果'
         };
-        
         if (this.status && stageMessageMap[currentStage]) {
             this.status.textContent = stageMessageMap[currentStage];
         }
-    }
 
-    markAllCompleted() {
-        if (this.progressBarFill) this.progressBarFill.style.width = '100%';
-        if (this.progressPercent) this.progressPercent.textContent = '100%';
-        if (this.status) this.status.textContent = '分析完成！';
+        // 3. 🆕 更新詳細 Log (需求 1)
+        // if (this.logContainer && log) {
+        //     // 格式化顯示，如果是多行，保持最新一行在上面
+        //     const logEntry = document.createElement('div');
+        //     logEntry.style.fontSize = '12px';
+        //     logEntry.style.color = '#666';
+        //     logEntry.style.fontFamily = 'monospace';
+        //     logEntry.style.borderBottom = '1px solid #f0f0f0';
+        //     logEntry.style.padding = '2px 0';
+        //     logEntry.textContent = `> ${log}`;
+
+        //     // 只保留最新的 5 條 Log 避免畫面太長
+        //     this.logContainer.prepend(logEntry);
+        //     if (this.logContainer.childNodes.length > 5) {
+        //         this.logContainer.removeChild(this.logContainer.lastChild);
+        //     }
+        // }
     }
 
     async fetchCompletedData(esgId) {

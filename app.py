@@ -143,7 +143,9 @@ def check_progress(esg_id):
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
+                # 🆕 同步讀取分析狀態、具體百分比與最後一筆 Log
                 sql = "SELECT analysis_status FROM company WHERE ESG_id = %s"
+                # sql = "SELECT analysis_status, analysis_progress, last_log FROM company WHERE ESG_id = %s"
                 cursor.execute(sql, (esg_id,))
                 result = cursor.fetchone()
 
@@ -152,9 +154,13 @@ def check_progress(esg_id):
 
                 # 不預設為 stage1，直接回傳資料庫真實狀態
                 current_status = result["analysis_status"] or "processing"
+                # progress = result["analysis_progress"] or 0
+                # log = result["last_log"] or ""
                 
                 return jsonify({
                     "stage": current_status,  # 這會對應前端的 data.stage
+                    # "progress": progress,
+                    # "last_log": log,
                     "status": "completed" if current_status == "completed" else "processing"
                 })
     except Exception as e:
