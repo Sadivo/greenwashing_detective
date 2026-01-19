@@ -18,6 +18,7 @@ Word Cloud 文字雲生成模組
 import jieba
 import os
 import sys
+import re
 from collections import Counter
 import pdfplumber
 import time
@@ -87,6 +88,36 @@ def _load_stopwords() -> set:
     except Exception as e:
         print(f"警告：停用詞檔讀取失敗 ({e})，將使用空集合。")
         return set()
+
+
+def is_clean_word(word: str) -> bool:
+    """
+    檢查詞彙是否為乾淨的關鍵字
+    
+    過濾規則：
+    1. 過濾純數字、年份 (如: 2023, 100, 0.5)
+    2. 過濾單個字 (如: "的", "在", "A", "B")
+    3. 過濾帶有數字的混合詞 (如: 112年, Q1, 1廠)
+    
+    Args:
+        word: 要檢查的詞彙
+    
+    Returns:
+        bool: True 表示是乾淨的詞彙，False 表示應該被過濾掉
+    """
+    # 1. 過濾純數字、年份 (如: 2023, 100, 0.5)
+    if re.match(r'^[\d\.,%]+$', word):
+        return False
+    
+    # 2. 過濾單個字 (如: "的", "在", "A", "B") -> 中文單字通常意義模糊
+    if len(word) < 2:
+        return False
+    
+    # 3. 過濾帶有數字的混合詞 (如: 112年, Q1, 1廠) - 視需求決定是否開啟
+    if re.search(r'\d', word): 
+        return False 
+        
+    return True
 
 
 def generate_wordcloud(
@@ -176,9 +207,10 @@ def generate_wordcloud(
     
     # === 6. 斷詞並過濾 ===
     words = jieba.lcut(text)
+    # 應用 is_clean_word 過濾規則
     filtered_words = [
         w for w in words
-        if len(w) >= 2 and w != '\n' and w not in stopwords
+        if w != '\n' and w not in stopwords and is_clean_word(w)
     ]
     
     # === 7. 計算字頻 ===
