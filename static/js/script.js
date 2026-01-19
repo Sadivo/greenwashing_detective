@@ -10,7 +10,7 @@ class RealProgressController {
         this.esgId = null;
         this.pollInterval = null;
         this.pollCount = 0;
-        this.maxPollAttempts = 300; 
+        this.maxPollAttempts = 450; // 延長至 15 分鐘 (2s * 450)
     }
 
     show() {
@@ -73,17 +73,30 @@ class RealProgressController {
         const currentStage = data.stage || data.analysis_status; 
         const currentStatus = data.status || (currentStage === 'completed' ? 'completed' : 'processing');
 
-        // 更新 UI
+        // 1. 先更新 UI 到對應進度
         this.updateSteps(currentStage, currentStatus);
-        
-        if (currentStatus === 'completed') {
-            this.stopPolling();
-            // ...
+
+        // 2. 如果狀態是完成
+            if (currentStatus === 'completed') {
+                this.stopPolling();
+                
+                // 強制將進度條設為 100% (確保 UI 顯示一致)
+                this.markAllCompleted();
+
+                // 停留1.5秒 再隱藏並顯示結果
+                setTimeout(async () => {
+                    this.hide(); // 這也會呼叫 stopPolling，但前面已經停了所以沒關係
+                    
+                    // 執行完成後的資料抓取
+                    if (this.esgId) {
+                        await this.fetchCompletedData(this.esgId);
+                    }
+                }, 1500); 
+            }
+        } catch (error) {
+            console.error('進度查詢錯誤:', error);
         }
-    } catch (error) {
-        console.error('進度查詢錯誤:', error);
     }
-}
 
     // 🆕 UI 邏輯
     updateSteps(currentStage, status) {

@@ -167,6 +167,26 @@ def update_analysis_status(esg_id, status, error_msg=None):
         return (False, f"更新失敗: {str(e)}")
 
 
+# def update_progress(esg_id, progress, log_msg):
+#     """
+#     更新資料庫中的進度與 Log
+#     :param esg_id: 公司的 ESG_id (例如 20242330)
+#     :param progress: 0-100 的數字
+#     :param log_msg: 要顯示在前端的字串
+#     """
+#     conn = get_db_connection()
+#     try:
+#         with conn.cursor() as cursor:
+#             sql = """
+#                 UPDATE company 
+#                 SET analysis_progress = %s, last_log = %s 
+#                 WHERE ESG_id = %s
+#             """
+#             cursor.execute(sql, (progress, log_msg, esg_id))
+#             conn.commit()
+#     finally:
+#         conn.close()
+
 def insert_analysis_results(esg_id, company_name, industry, url, analysis_items):
     """
     插入完整的分析結果至 company_report 表，並更新 company 表的基本資料
