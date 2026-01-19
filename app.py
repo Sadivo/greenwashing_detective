@@ -6,7 +6,8 @@ from pymysql.cursors import DictCursor
 import os
 import json
 from dotenv import load_dotenv
-from app.calculate_esg import calculate_esg_scores
+from src.calculate_esg import calculate_esg_scores
+from config import PATHS
 
 load_dotenv()
 
@@ -99,7 +100,7 @@ def index():
                     SELECT ESG_category, SASB_topic, risk_score, adjustment_score, 
                            report_claim, page_number, greenwashing_factor,
                            external_evidence, external_evidence_url, 
-                           consistency_status, MSCI_flag
+                           consistency_status, MSCI_flag, is_verified
                     FROM company_report 
                     WHERE company_id = %s AND year = %s
                 """
@@ -155,9 +156,9 @@ def query_company():
     """
     try:
         # 延遲導入以避免循環依賴或初始化錯誤，並確保能被 try-except 捕獲
-        from db_service import query_company_data, insert_company_basic, update_analysis_status, insert_analysis_results
-        from crawler_esgReport import validate_report_exists, download_esg_report
-        from gemini_api import analyze_esg_report_mock
+        from src.db_service import query_company_data, insert_company_basic, update_analysis_status, insert_analysis_results
+        from src.crawler_esgReport import validate_report_exists, download_esg_report
+        from src.gemini_api import analyze_esg_report
         
         # 解析請求參數
         data = request.get_json()
@@ -183,7 +184,7 @@ def query_company():
         # 情況 A: completed - 直接回傳資料
         if result['status'] == 'completed':
             # 計算 ESG 分數（使用現有邏輯）
-            from app.calculate_esg import calculate_esg_scores
+            from src.calculate_esg import calculate_esg_scores
             
             company_data = result['data']
             details = result['details']
@@ -280,22 +281,169 @@ def query_company():
                 
                 pdf_path = pdf_path_or_error
                 
-                # Step 3: AI 分析（使用模擬版本，傳入真實的公司資料）
-                analysis_result = analyze_esg_report_mock(
-                    pdf_path, 
-                    year, 
-                    company_code,
-                    company_name=report_info.get('company_name', ''),
-                    industry=report_info.get('sector', '')
-                )
+               # Step 3a & 3b: 平行執行 Word Cloud 和 AI 分析
+                import threading
                 
-                # Step 4: 插入分析結果至資料庫
+                # 儲存結果的變數
+                wordcloud_result = None
+                analysis_result = None
+                
+                def run_wordcloud():
+                    """Word Cloud 生成執行緒"""
+                    nonlocal wordcloud_result
+                    try:
+                        from src.word_cloud import generate_wordcloud
+                        wordcloud_result = generate_wordcloud(year, company_code, pdf_path, force_regenerate=False)
+                    except Exception as e:
+                        wordcloud_result = {'success': False, 'error': str(e)}
+                        print(f"⚠️ Word Cloud 生成錯誤: {e}")
+                
+                def run_ai_analysis():
+                    """AI 分析執行緒"""
+                    nonlocal analysis_result
+                    try:
+                        analysis_result = analyze_esg_report(
+                            pdf_path, 
+                            year, 
+                            company_code,
+                            company_name=report_info.get('company_name', ''),
+                            industry=report_info.get('sector', '')
+                        )
+                    except Exception as e:
+                        raise  # AI 分析失敗則整個流程失敗
+                
+                # 建立並啟動執行緒
+                wordcloud_thread = threading.Thread(target=run_wordcloud, name="WordCloudThread")
+                ai_thread = threading.Thread(target=run_ai_analysis, name="AIAnalysisThread")
+                
+                print("🚀 啟動平行處理：Word Cloud 與 AI 分析")
+                wordcloud_thread.start()
+                ai_thread.start()
+                
+                # 等待完成
+                wordcloud_thread.join(timeout=120)  # Word Cloud 最多等 2 分鐘
+                ai_thread.join()  # AI 分析必須完成
+                
+                # 處理 Word Cloud 結果（非必要，失敗不影响主流程）
+                if wordcloud_result and wordcloud_result.get('success'):
+                    if wordcloud_result.get('skipped'):
+                        print(f"ℹ️ Word Cloud 已存在，跳過生成")
+                    else:
+                        print(f"✅ Word Cloud 生成成功: {wordcloud_result.get('word_count', 0)} 個關鍵字")
+                else:
+                    error_msg = wordcloud_result.get('error') if wordcloud_result else 'timeout'
+                    print(f"⚠️ Word Cloud 生成失敗: {error_msg}（不影響主流程）")
+                
+                # Step 4: 新聞爬蟲驗證 ✨ NEW
+                print("\n--- Step 4: 新聞爬蟲驗證 ---")
+                try:
+                    from src.crawler_news import search_news_for_report
+                    
+                    news_result = search_news_for_report(
+                        year=year,
+                        company_code=company_code,
+                        force_regenerate=True
+                    )
+                    
+                    if news_result['success']:
+                        if news_result.get('skipped'):
+                            print(f"ℹ️ 新聞資料已存在，跳過生成")
+                        else:
+                            print(f"✅ 新聞爬蟲完成：{news_result['news_count']} 則新聞")
+                            print(f"   處理項目: {news_result['processed_items']}")
+                            print(f"   失敗項目: {news_result['failed_items']}")
+                    else:
+                        print(f"⚠️ 新聞爬蟲失敗：{news_result.get('error')}（不影響主流程）")
+                except Exception as e:
+                    print(f"⚠️ 新聞爬蟲發生錯誤: {str(e)}（不影響主流程）")
+                
+                # Step 5: AI 驗證與評分調整 ✨ NEW
+                print("\n--- Step 5: AI 驗證與評分調整 ---")
+                try:
+                    from src.run_prompt2_gemini import verify_esg_with_news
+                    
+                    verify_result = verify_esg_with_news(
+                        year=year,
+                        company_code=company_code,
+                        force_regenerate=False
+                    )
+                    
+                    if verify_result['success']:
+                        if verify_result.get('skipped'):
+                            print(f"ℹ️ AI 驗證結果已存在，跳過生成")
+                        else:
+                            stats = verify_result['statistics']
+                            print(f"✅ AI 驗證完成")
+                            print(f"   輸出檔案: {verify_result['output_path']}")
+                            print(f"   處理項目: {stats['processed_items']}")
+                            print(f"   Token 使用: {stats['total_tokens']:,} (輸入: {stats['input_tokens']:,}, 輸出: {stats['output_tokens']:,})")
+                            print(f"   執行時間: {stats['api_time']:.2f} 秒")
+                    else:
+                        print(f"⚠️ AI 驗證失敗：{verify_result.get('error')}（不影響主流程）")
+                except Exception as e:
+                    print(f"⚠️ AI 驗證發生錯誤: {str(e)}（不影響主流程）")
+                
+                # Step 6: 來源可靠度驗證 ✨ NEW
+                print("\n--- Step 6: 來源可靠度驗證 ---")
+                try:
+                    from src.pplx_api import verify_evidence_sources
+                    
+                    pplx_result = verify_evidence_sources(
+                        year=year,
+                        company_code=company_code,
+                        force_regenerate=False
+                    )
+                    
+                    if pplx_result['success']:
+                        if pplx_result.get('skipped'):
+                            print(f"ℹ️ 來源驗證結果已存在，跳過生成")
+                        else:
+                            stats = pplx_result['statistics']
+                            print(f"✅ 來源驗證完成")
+                            print(f"   輸出檔案: {pplx_result['output_path']}")
+                            print(f"   處理項目: {stats['processed_items']}")
+                            print(f"   有效 URL: {stats['verified_count']}")
+                            print(f"   更新 URL: {stats['updated_count']}")
+                            print(f"   失敗項目: {stats['failed_count']}")
+                            print(f"   Perplexity 調用: {stats['perplexity_calls']} 次")
+                            print(f"   執行時間: {stats['execution_time']:.2f} 秒")
+                    else:
+                        print(f"⚠️ 來源驗證失敗：{pplx_result.get('error')}（不影響主流程）")
+                except Exception as e:
+                    print(f"⚠️ 來源驗證發生錯誤: {str(e)}（不影響主流程）")
+                
+                # Step 7: 讀取 P3 JSON 並插入分析結果至資料庫
+                print("\n--- Step 7: 存入資料庫 ---")
+                import json
+                
+                # 讀取 P3 JSON（最終分析結果）
+                p3_path = os.path.join(PATHS['P3_JSON'], f'{year}_{company_code}_p3.json')
+                
+                if os.path.exists(p3_path):
+                    with open(p3_path, 'r', encoding='utf-8') as f:
+                        final_analysis_items = json.load(f)
+                    print(f"📂 載入 P3 JSON: {len(final_analysis_items)} 筆分析項目")
+                else:
+                    # P3 不存在，更新狀態為 failed
+                    print(f"❌ P3 JSON 不存在: {p3_path}")
+                    update_analysis_status(esg_id, 'failed')
+                    return jsonify({
+                        'status': 'failed',
+                        'message': f'分析流程未完成：找不到 P3 JSON 檔案 ({p3_path})。請確認 Step 5 (AI 驗證與評分調整) 和 Step 6 (來源可靠度驗證) 已成功執行。',
+                        'esg_id': esg_id
+                    }), 500
+                
+                # 提取基本資訊
+                company_name = report_info.get('company_name', '')
+                industry = report_info.get('sector', '')
+                report_url = analysis_result.get('url', f"https://mops.twse.com.tw/mops/web/t100sb07_{year}")
+                
                 insert_success, insert_msg = insert_analysis_results(
                     esg_id=esg_id,
-                    company_name=analysis_result['company_name'],
-                    industry=analysis_result['industry'],
-                    url=analysis_result['url'],
-                    analysis_items=analysis_result['analysis_items']
+                    company_name=company_name,
+                    industry=industry,
+                    url=report_url,
+                    analysis_items=final_analysis_items
                 )
                 
                 if not insert_success:
@@ -306,14 +454,14 @@ def query_company():
                         'esg_id': esg_id
                     }), 500
                 
-                # Step 5: 更新狀態為 completed
+                # Step 8: 更新狀態為 completed
                 update_analysis_status(esg_id, 'completed')
                 
-                # Step 6: 查詢完整資料並回傳
+                # Step 9: 查詢完整資料並回傳
                 final_result = query_company_data(year, company_code)
                 
                 if final_result['status'] == 'completed':
-                    from app.calculate_esg import calculate_esg_scores
+                    from src.calculate_esg import calculate_esg_scores
                     
                     company_data = final_result['data']
                     details = final_result['details']
@@ -362,9 +510,9 @@ def query_company():
         }), 500
 
 # Serve word cloud JSON files
-@app.route('/wordcloud/<filename>')
+@app.route('/word_cloud/wc_output/<filename>')
 def serve_wordcloud(filename):
-    return send_from_directory('word_cloud/wc_output', filename)
+    return send_from_directory(PATHS['WORD_CLOUD_OUTPUT'], filename)
 
 # 如果需要 API 格式 (Optional)
 @app.route('/api/companies')
