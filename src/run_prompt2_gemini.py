@@ -188,7 +188,7 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-pro",
+            model="gemini-2.5-flash",
             contents=user_input,
             config=types.GenerateContentConfig(
                 system_instruction=prompt_template,

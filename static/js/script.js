@@ -1075,7 +1075,29 @@ async function queryCompanyData(year, companyCode) {
 
         const result = await response.json();
         console.log('Query result:', result);
+        
+        // ========================================================
+        // 🆕 新增：同步 API 資料到全域變數 companiesData
+        // ========================================================
+        if (result.status === 'completed' && result.data) {
+            // 尋找全域變數中是否已經有這一筆 (比對代碼與年度)
+            const idx = companiesData.findIndex(c => 
+                String(c.stockId) === String(result.data.stockId) && 
+                String(c.year) === String(result.data.year)
+            );
 
+            if (idx !== -1) {
+                // 找到舊資料，用 API 回傳的「完整最新資料」覆蓋它
+                companiesData[idx] = result.data;
+                console.log("✅ 全域變數已更新最新分析結果");
+            } else {
+                // 如果原本不在清單中，就推入新資料
+                companiesData.push(result.data);
+                console.log("✅ 已新增一筆分析資料到全域變數");
+            }
+        }
+        // ========================================================
+        
         // 隱藏初始提示
         document.getElementById('initialPrompt').style.display = 'none';
 
