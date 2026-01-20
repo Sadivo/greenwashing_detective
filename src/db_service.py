@@ -155,7 +155,7 @@ def update_analysis_status(esg_id, status, error_msg=None):
             with conn.cursor() as cursor:
                 sql = "UPDATE company SET analysis_status = %s WHERE ESG_id = %s"
                 cursor.execute(sql, (status, esg_id))
-                
+                conn.commit()
                 if cursor.rowcount == 0:
                     # 如果用 esg_id 找不到(可能是舊資料)，嘗試解析 esg_id 看看
                     # 但這情況較少見，除非是在處理舊資料的狀態更新
