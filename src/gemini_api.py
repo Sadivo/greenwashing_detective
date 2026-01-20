@@ -62,7 +62,7 @@ class ESGReportAnalyzer:
     SASB_MAP_FILE = DATA_FILES['SASB_WEIGHT_MAP']
     
     # ✅ 使用 Gemini 2.5 Flash Lite
-    MODEL_NAME = "models/gemini-2.5-flash-lite" 
+    MODEL_NAME = "models/gemini-2.5-flash" 
 
     def __init__(self, target_year: int, target_company_id: str, company_name: str = '', industry: str = ''):
         """
@@ -359,7 +359,7 @@ class ESGReportAnalyzer:
                 ],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    temperature=0  # 設定為 0 以確保分析結果的嚴謹與穩定
+                    temperature=0.1  # 設定為 0 以確保分析結果的嚴謹與穩定
                 )
             )
 
