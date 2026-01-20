@@ -79,6 +79,8 @@ def index():
     companies_data = []
     
     try:
+        # 關鍵：強制同步資料庫狀態
+        conn.commit()
         with conn.cursor() as cursor:
             # --- [Update] 資料庫讀取段落 (取得所有公司) ---
             # 資料表名稱變更: companies -> company
@@ -157,12 +159,25 @@ def check_progress(esg_id):
                 # progress = result["analysis_progress"] or 0
                 # log = result["last_log"] or ""
                 
-                return jsonify({
-                    "stage": current_status,  # 這會對應前端的 data.stage
-                    # "progress": progress,
-                    # "last_log": log,
+                response = jsonify({
+                    "stage": current_status,
                     "status": "completed" if current_status == "completed" else "processing"
                 })
+    
+                # 強制後端不給瀏覽器快取
+                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
+                
+                return response
+
+                #舊程式碼
+                #return jsonify({
+                #    "stage": current_status,  # 這會對應前端的 data.stage
+                #    # "progress": progress,
+                #    # "last_log": log,
+                #    "status": "completed" if current_status == "completed" else "processing"
+                #})
     except Exception as e:
         return jsonify({"error": str(e), "status": "error"}), 500
 
