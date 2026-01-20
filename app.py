@@ -85,7 +85,8 @@ def index():
             # --- [Update] 資料庫讀取段落 (取得所有公司) ---
             # 資料表名稱變更: companies -> company
             # 欄位對應: id -> ESG_id (或忽略), name -> company_name, stock_id -> company_code
-            sql_companies = "SELECT * FROM company"
+            # 🆕 只取 analysis_status = 'completed' 的資料，排除正在分析中的記錄
+            sql_companies = "SELECT * FROM company WHERE analysis_status = 'completed'"
             cursor.execute(sql_companies)
             companies_basic = cursor.fetchall()
             
@@ -229,6 +230,8 @@ def query_company():
         if result['exists'] and result['data'] and 'ESG_id' in result['data']:
             esg_id = result['data']['ESG_id']
         
+        PROCESSING_STATES = ['processing', 'stage1', 'stage2', 'stage3', 'stage4', 'stage5', 'stage6']
+
         # 情況 A: completed - 直接回傳資料
         if result['status'] == 'completed':
             # 計算 ESG 分數（使用現有邏輯）
@@ -261,7 +264,7 @@ def query_company():
             })
         
         # 情況 B: processing - 回傳進行中訊息
-        elif result['status'] == 'processing':
+        elif result['status'] in PROCESSING_STATES:
             return jsonify({
                 'status': 'processing',
                 'message': '分析進行中，請稍候',
