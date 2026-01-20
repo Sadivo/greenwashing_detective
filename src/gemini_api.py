@@ -62,7 +62,7 @@ class ESGReportAnalyzer:
     SASB_MAP_FILE = DATA_FILES['SASB_WEIGHT_MAP']
     
     # ✅ 使用 Gemini 2.5 Flash Lite
-    MODEL_NAME = "models/gemini-2.5-flash-lite" 
+    MODEL_NAME = "models/gemini-2.5-flash" 
 
     def __init__(self, target_year: int, target_company_id: str, company_name: str = '', industry: str = ''):
         """
@@ -308,8 +308,15 @@ class ESGReportAnalyzer:
    - 1分 (軟性)：僅有願景、口號或模糊承諾。
    - 2分 (定性)：有具體管理措施，但缺乏數據。
    - 3分 (硬性/定量)：具體量化數據、歷史趨勢。
-   - 4分 (確信/查驗)：數據經過 ISAE 3000 或 AA1000 第三方查驗/確信 (須嚴格檢查附錄查證聲明)。
-3. **重大議題檢核**：若該議題的數值為 2 (高重大性)，但報告書完全未提及，屬於重大資訊缺失。請務必填寫 "report_claim": "N/A", "risk_score": 1。
+   - 4分 (卓越揭露)：滿足下列 **任一條件** 即可得 4 分：
+    - **條件 A (第三方確信)**：數據明確標註經過 ISAE 3000 或 AA1000 第三方查證。
+    - **條件 B (完整透明度)**：雖無第三方查證，但同時滿足以下兩要素：
+        1. **明確目標**：設定具體的未來量化目標 (Target)。
+        2. **細節拆解**：數據有進行細項拆解 (例如：按性別、地區、範疇分類) **或** 清楚說明計算方法學/標準 (如 GRI 編號、計算公式)。
+3. **重大議題檢核**：
+   - **權重判斷**：根據 SASB 產業權重表，每個議題都有對應的權重值（1 或 2）。
+   - **權重 1（低重大性）+ 未揭露**：若該議題的權重為 1，且報告書完全未提及，則**不需要輸出此條目**。
+   - **權重 2（高重大性）+ 未揭露**：若該議題的權重為 2，但報告書完全未提及，屬於重大資訊缺失。請務必填寫 "report_claim": "N/A", "risk_score": 1。
 4. **邏輯一致性檢查**：請檢查報告前後文。若同一議題的數據或宣稱出現矛盾 (例如不同章節數字不符)，請將 "Internal_consistency": false，並在 "greenwashing_factor" 具體指出矛盾點，同時將最終 risk_score 扣減 1 分 (最低為 0)；若一致則 "Internal_consistency": true。
 5. **漂綠因子分析(greenwashing_factor)**：(必須使用中文輸出，嚴禁填寫「無」或任何空泛內容)
     - 請依據以下框架進行分析，必須輸出實質內容：
@@ -359,7 +366,7 @@ class ESGReportAnalyzer:
                 ],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    temperature=0  # 設定為 0 以確保分析結果的嚴謹與穩定
+                    temperature=0.1  # 設定為 0 以確保分析結果的嚴謹與穩定
                 )
             )
 

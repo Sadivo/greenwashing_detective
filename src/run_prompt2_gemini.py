@@ -69,6 +69,7 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
         print(f"❌ 錯誤：讀取 MSCI 標準失敗 - {e}")
         return {'success': False, 'error': f'MSCI data read error: {e}'}
 
+
     # 5. 準備 Prompt（將變數嵌入）
     prompt_template = f"""
 你將扮演ESG審查員，負責進行外部新聞比對與風險調整。
@@ -135,7 +136,8 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
 
 【相關性檢查】
 比對前，請先執行相關性檢查：
-- 檢查驗證資料是否明確提及 'company' 或 'company_code'
+- **目標公司**: {original_data[0]['company']} (股票代號: {original_data[0]['company_id']})
+- 檢查驗證資料是否明確提及 '{original_data[0]['company']}' 或 '{original_data[0]['company_id']}'
 - 如果是在講其他公司，請判定為無效
 - 檢查新聞內容是否與 report_claim 的主題有實質關聯？
 - 如果發現新聞與公司無關、主題完全不符、無新聞，請直接輸出：
@@ -188,7 +190,7 @@ def process_esg_news_verification(input_json_path, news_json_path, msci_json_pat
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-pro",
+            model="gemini-2.5-flash",
             contents=user_input,
             config=types.GenerateContentConfig(
                 system_instruction=prompt_template,
