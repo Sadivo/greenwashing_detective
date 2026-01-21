@@ -274,6 +274,12 @@ function setupEventListeners() {
 function handleSearch() {
     console.log("Search triggered.");
 
+    // 🆕 停止並隱藏進度條（確保任何新搜尋都會清除舊的進度條）
+    if (progressController) {
+        progressController.stopPolling();
+        progressController.hide();
+    }
+
     if (currentCompany) {
         closeDetail();
     }
@@ -1125,6 +1131,12 @@ function showAnalysisStatus(status, message, data = null, year = null, companyCo
         // ✅ 已完成：顯示資料
         statusDisplay.style.display = 'none';
         resultsDashboard.style.display = 'block';
+
+        // 🆕 停止進度條輪詢並隱藏進度條
+        if (progressController) {
+            progressController.stopPolling();
+            progressController.hide();
+        }
 
         // 使用現有的 renderCompanies 函式顯示資料
         filteredData = [data];
