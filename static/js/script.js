@@ -1143,6 +1143,21 @@ function showAnalysisStatus(status, message, data = null, year = null, companyCo
             progressController.startPolling(esgId);
         }
 
+    } else if (status === 'resume_needed') {
+        // 🆕 需要恢復 - 顯示斷點恢復選項
+        statusDisplay.style.display = 'block';
+        resultsDashboard.style.display = 'none';
+
+        statusContent.innerHTML = `
+            <div style="text-align: center; padding: 2rem; background: #fff3cd; border-radius: 8px;">
+                <h3 style="color: #856404;">⚠️ ${message}</h3>
+                <p style="color: #856404; margin: 1rem 0;">您可以選擇從斷點繼續，或重新開始分析。</p>
+                <button class="btn" onclick="confirmAutoFetch(${year}, '${companyCode}')" style="margin-top: 1rem; background: var(--primary); color: white;">
+                    ▶️ 從斷點繼續
+                </button>
+            </div>
+        `;
+
     } else if (status === 'failed') {
         // ❌ 失敗
         statusDisplay.style.display = 'block';
