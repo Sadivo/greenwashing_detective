@@ -40,7 +40,7 @@ SASB_KEYWORD_PATH = DATA_FILES['SASB_KEYWORD']  # SASB 關鍵字
 MAX_RETRIES = 3
 RETRY_DELAY = 5  # 秒
 SEARCH_DELAY = 0.8  # 每次搜尋後延遲
-MAX_RESULTS_PER_TOPIC = 10
+MAX_RESULTS_PER_TOPIC = 5
 
 # 搜索配置（僅台灣）
 SEARCH_LANGUAGE = 'zh-TW'
@@ -257,9 +257,6 @@ def search_news_for_report(
     processed_items = 0
     failed_items = 0
     failure_details = []
-    
-    # 只處理前5筆
-    p1_data_list = p1_data_list[:5]
     
     print(f"\n開始執行新聞搜尋，共 {len(p1_data_list)} 筆資料...")
     print("=" * 60)
