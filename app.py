@@ -575,11 +575,11 @@ def query_company():
                                 stats = pplx_result['statistics']
                                 print(f"✅ 來源驗證完成")
                                 print(f"   輸出檔案: {pplx_result['output_path']}")
-                                print(f"   處理項目: {stats['processed_items']}")
+                                print(f"   輸入項目: {stats['total_input']}")
+                                print(f"   輸出項目: {stats['total_output']}")
                                 print(f"   有效 URL: {stats['verified_count']}")
                                 print(f"   更新 URL: {stats['updated_count']}")
                                 print(f"   失敗項目: {stats['failed_count']}")
-                                print(f"   Perplexity 調用: {stats['perplexity_calls']} 次")
                                 print(f"   執行時間: {stats['execution_time']:.2f} 秒")
                         else:
                             print(f"⚠️ 來源驗證失敗：{pplx_result.get('error')}（不影響主流程）")
