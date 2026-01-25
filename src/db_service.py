@@ -18,15 +18,30 @@ def get_db_connection():
     資料庫連線 Context Manager
     自動處理連線的開啟與關閉
     """
-    conn = pymysql.connect(
-        host=os.getenv('DB_HOST'),
-        port=int(os.getenv('DB_PORT')),
-        user=os.getenv('DB_USER'),
-        password=os.getenv('DB_PASSWORD'),
-        db=os.getenv('DB_NAME'),
-        charset='utf8mb4',
-        cursorclass=DictCursor
-    )
+    connection_name = os.getenv('INSTANCE_CONNECTION_NAME')
+
+
+    if connection_name:
+        # Cloud Run 環境
+        conn = pymysql.connect(
+            unix_socket=f"/cloudsql/{connection_name}",
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            db=os.getenv('DB_NAME'),
+            charset='utf8mb4',
+            cursorclass=DictCursor
+        )
+    else:
+        # 本機環境
+        conn = pymysql.connect(
+            host=os.getenv('DB_HOST', '127.0.0.1'),
+            port=int(os.getenv('DB_PORT', 3306)),
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            db=os.getenv('DB_NAME'),
+            charset='utf8mb4',
+            cursorclass=DictCursor
+        )
     try:
         yield conn
         conn.commit()
