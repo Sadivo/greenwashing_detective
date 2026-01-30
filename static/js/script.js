@@ -979,16 +979,16 @@ function getRiskLabel(score) {
 
     if (numScore >= 3.5) {
         labelClass = 'no';
-        labelText = `無風險 (${numScore})`;
+        labelText = `無風險`;
     } else if (numScore >= 2.5) {
         labelClass = 'low';
-        labelText = `低風險 (${numScore})`;
+        labelText = `低風險`;
     } else if (numScore >= 1.5) {
         labelClass = 'medium';
-        labelText = `中風險 (${numScore})`;
+        labelText = `中風險`;
     } else {
         labelClass = 'high';
-        labelText = `高風險 (${numScore})`;
+        labelText = `高風險`;
     }
 
     return `<span class="risk-label ${labelClass}">${labelText}</span>`;
