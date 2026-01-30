@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# venv
+.venv/
+venv/
+env/
+
+# IDE / OS
+.vscode/
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Secrets
+.env
+*.pem
+*.key
+
+# local junk
+*.sqlite3
+
