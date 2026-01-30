@@ -14,7 +14,7 @@
 
 <body>
     <div class="header">
-        <h1>🌱 ESG 綠色洗白風險監測儀表板</h1>
+        <h1>ESG抓耙子 綠色洗白風險監測儀表板</h1>
         <p>表面很綠，底下見真章</p>
     </div>
 
@@ -22,13 +22,13 @@
         <div class="filter-section">
             <div class="filter-row">
                 <div class="filter-group">
-                    <label>🔍 公司代碼</label>
+                    <label>公司代碼</label>
                     <input type="text" id="searchInput" list="companyOptions" placeholder="請輸入公司代碼（如 2330）...">
                     <datalist id="companyOptions">
                     </datalist>
                 </div>
                 <div class="filter-group">
-                    <label>🏢 產業別</label>
+                    <label>產業別</label>
                     <select id="industryFilter">
                         <option value="">全部產業</option>
                         <option value="水泥工業">水泥工業</option>
@@ -67,7 +67,7 @@
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>📅 年度</label>
+                    <label>年度</label>
                     <select id="yearFilter">
                         <option value="">全部年度</option>
                         <option value="2024" selected>2024</option>
@@ -76,7 +76,7 @@
                         <option value="2021">2021</option>
                     </select>
                 </div>
-                <button class="btn" id="searchButton" style="margin-top: 1.5rem;">🔎 搜尋</button>
+                <button class="btn" id="searchButton" style="margin-top: 1.5rem;">搜尋分析</button>
             </div>
         </div>
 
@@ -88,10 +88,11 @@
             </div>
         </div>
 
-                <!-- 進度條區域 -->
+        <!-- 進度條區域 -->
         <div id="progressContainer" style="display: none; text-align: center; padding: 40px 20px;">
             <!-- 上方顯示當前狀態文字 -->
-            <div id="progressStatus" style="margin-bottom: 15px; font-weight: bold; color: var(--primary); font-size: 1.1rem;">
+            <div id="progressStatus"
+                style="margin-bottom: 15px; font-weight: bold; color: var(--primary); font-size: 1.1rem;">
                 正在準備分析...
             </div>
 
@@ -103,7 +104,7 @@
                     <span id="progressPercent">0%</span>
                 </div>
             </div>
-            
+
             <!-- 🆕 新增這個區域來讀取後台的 Log
             <div id="progressLog" style="margin-top:10px; height:100px; overflow:hidden; background:#f9f9f9; padding:5px; border-radius:4px;">
             </div> -->
@@ -161,18 +162,18 @@
             </div>
 
             <div id="layer4" class="analysis-section">
-                <h3 class="section-title">🔍 第四層：內部比對 </h3>
+                <h3 class="section-title">內部比對分析</h3>
                 <p style="color: var(--text-secondary); margin-bottom: 1rem;">分析報告內容與實際績效的一致性</p>
                 <div class="table-responsive">
                     <table class="comparison-table" style="min-width: 600px;">
                         <thead>
                             <tr>
-                                <th width="10%">esg_category</th>
-                                <th width="20%">sasb_topic</th>
-                                <th width="8%">page_number</th>
-                                <th width="20%">report_claim</th>
-                                <th width="15%">greenwashing_factor</th>
-                                <th width="12%">risk_score</th>
+                                <th width="10%">ESG類別</th>
+                                <th width="20%">SASB議題</th>
+                                <th width="8%">頁碼</th>
+                                <th width="20%">報告聲明</th>
+                                <th width="15%">綠色洗白因子</th>
+                                <th width="12%">風險分數</th>
                             </tr>
                         </thead>
                         <tbody id="layer4Table">
@@ -182,18 +183,18 @@
             </div>
 
             <div id="layer5" class="analysis-section hidden">
-                <h3 class="section-title">📰 第五層：外部新聞揭露對比</h3>
+                <h3 class="section-title">外部新聞揭露對比</h3>
                 <p style="color: var(--text-secondary); margin-bottom: 1rem;">對標外部新聞與監管文件的一致性</p>
                 <div class="table-responsive">
                     <table class="comparison-table" style="min-width: 600px;">
                         <thead>
                             <tr>
-                                <th>esg_category</th>
-                                <th>report_claim</th>
-                                <th>external_evidence</th>
-                                <th>consistency_status</th>
-                                <th>MSCI_flag</th>
-                                <th>adjustment_score</th>
+                                <th>ESG類別</th>
+                                <th>報告聲明</th>
+                                <th>外部證據</th>
+                                <th>一致性狀態</th>
+                                <th>MSCI標誌</th>
+                                <th>調整分數</th>
                             </tr>
                         </thead>
                         <tbody id="layer5Table">
@@ -203,7 +204,7 @@
             </div>
 
             <div id="layer6" class="analysis-section hidden">
-                <h3 class="section-title">⚖️ 第六層：SASB 產業權重分布 (Materiality Map)</h3>
+                <h3 class="section-title">SASB 產業權重分布 (Materiality Map)</h3>
                 <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">依據 SASB 標準，<span
                         style="font-weight:bold; color:var(--primary);">深色區塊</span> 代表該產業的重大議題 (權重 x 2)，<span
                         style="color:var(--text-secondary);">淺色區塊</span> 為一般議題 (權重 x 1)</p>
@@ -215,7 +216,7 @@
             </div>
 
             <div id="layer7" class="analysis-section">
-                <h3 class="section-title">☁️ 第七層：關鍵字出現頻率 (詞雲)</h3>
+                <h3 class="section-title">關鍵字出現頻率 (詞雲)</h3>
                 <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">報告中出現頻率最高的 ESG 相關詞彙（字體越大＝頻率越高）</p>
                 <div class="wordcloud-container">
                     <div class="wordcloud" id="wordcloudArea">
@@ -226,7 +227,7 @@
 
         <div id="layer8" class="analysis-section">
             <h3 class="section-title">
-                📊 第八層：參考資料
+                參考資料
                 <button
                     style="margin-left: 10px; padding: 5px; font-size: 1.2rem; border: none; background: transparent; cursor: pointer; color: var(--text-secondary); line-height: 1;"
                     onclick="var el=document.getElementById('layer8Content'); el.classList.toggle('collapsed'); this.innerText = el.classList.contains('collapsed') ? '▶' : '▼';">
@@ -235,7 +236,7 @@
             </h3>
             <span id="layer8Content" class="source-grid">
                 <div class="source-card">
-                    <div class="source-title">📰 資料來源</div>
+                    <div class="source-title">資料來源</div>
                     <ul class="source-list" style="font-size: 14px;">
                         <li><a href="https://www.sciencedirect.com/science/article/abs/pii/S0361368207000451"
                                 target="_blank" rel="noopener noreferrer">Clarkson et al. (2008) 模型</a></li>
@@ -258,11 +259,11 @@
 
         <div id="layer9" class="analysis-section" style="box-shadow: none; background: transparent; padding: 0;">
             <div style="padding: 1rem; border-top: 1px solid #e2e8f0;">
-                <p style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5; text-align: center;">
+                <p style="color: #475569; font-size: 0.85rem; line-height: 1.5; text-align: center;">
                     免責聲明：本平台之分析結果僅供學術研究與初步篩選參考，並非專業投資建議。所有數據來源均為公開資訊，本團隊已盡力確保資料正確性，但無法保證其絕對無誤。使用者在參考本平台資訊進行任何決策前，請務必自行查證或諮詢專業人士。
                 </p>
                 <p
-                    style="color: #94a3b8; font-size: 0.85rem; line-height: 1.5; text-align: center; margin-top: 0.5rem;">
+                    style="color: #475569; font-size: 0.85rem; line-height: 1.5; text-align: center; margin-top: 0.5rem;">
                     © 2024 Greenwashing Detective. All Rights Reserved.
                     本網站之所有內容（包括但不限於文字、圖表、程式碼及演算法）均受智慧財產權法保護，未經授權不得重製、散布或用於商業用途。
                 </p>

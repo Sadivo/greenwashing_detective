@@ -19,32 +19,61 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--bg-light);
+            background: var(--bg-light) url('../images/background.jpg') center/cover no-repeat fixed;
             color: var(--text-primary);
             line-height: 1.6;
+            position: relative;
+        }
+
+        /* 淡化背景圖片的覆蓋層 - 調降不透明度讓背景更明顯 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(248, 250, 252, 0.65);
+            z-index: 0;
+            pointer-events: none;
         }
 
         .header {
-            background: linear-gradient(135deg, var(--primary) 0%, #1a6666 100%);
+            background: url('../images/head.jpg') center/cover no-repeat;
             color: white;
             padding: 2rem;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1;
         }
 
         .header h1 {
             font-size: 2rem;
             margin-bottom: 0.5rem;
+            color: #ffffff;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 0, 0, 0.3);
+            padding: 0.75rem 1.5rem;
+            display: block;
+            max-width: fit-content;
+            font-weight: 700;
         }
 
         .header p {
-            font-size: 0.95rem;
-            opacity: 0.95;
+            font-size: 1.2rem;
+            color: #ffffff;
+            text-shadow: 1px 1px 6px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 0, 0, 0.3);
+            padding: 0.5rem 1.25rem;
+            display: block;
+            max-width: fit-content;
+            font-weight: 500;
         }
 
         .container {
             max-width: 1600px;
             margin: 0 auto;
             padding: 2rem 1rem;
+            position: relative;
+            z-index: 1;
         }
 
         /* 第一層：篩選區 */
@@ -746,22 +775,27 @@
             width: 100%;
             max-width: 600px;
             height: 35px;
-            background-color: #e0e0e0; /* 灰色底色 */
-            border-radius: 11px; /* 圓角:數字越大越圓 */
+            background-color: #e0e0e0;
+            /* 灰色底色 */
+            border-radius: 11px;
+            /* 圓角:數字越大越圓 */
             margin: 0 auto;
             overflow: hidden;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         /* 進度條填充部分 */
         .progress-bar-fill {
             height: 100%;
-            width: 0%; /* 由 JS 控制寬度 */
-            background-color: #1a6666; /* 與header同色 */
+            width: 0%;
+            /* 由 JS 控制寬度 */
+            background-color: #1a6666;
+            /* 與header同色 */
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); /* 平滑移動動畫 */
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            /* 平滑移動動畫 */
             position: relative;
         }
 
@@ -773,7 +807,7 @@
             left: 0;
             right: 0;
             height: 50%;
-            background: linear-gradient(to bottom, rgba(255,255,255,0.3), transparent);
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
             border-radius: 12px 12px 0 0;
         }
 
@@ -782,54 +816,62 @@
             color: white;
             font-weight: bold;
             font-size: 16px;
-            text-shadow: 0px 1px 2px rgba(0,0,0,0.2);
+            text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.2);
             z-index: 10;
         }
+
         /* 1. 調整 Tom Select 的外層容器寬度，確保與原欄位一致 */
-            .ts-wrapper {
-                width: 100% !important;
-                display: inline-block;
-                vertical-align: middle;
-            }
+        .ts-wrapper {
+            width: 100% !important;
+            display: inline-block;
+            vertical-align: middle;
+        }
 
-            /* 2. 核心：調整控制框的高度與內距 */
-            .ts-control {
-                min-height: 44px !important; /* 對齊計算後的總高度 */
-                padding: 12px !important;    /* 套用您圖中的 Padding 12 */
-                border: 0.667px solid #d0d0d0 !important; /* 套用您圖中的 Border 寬度 */
-                display: flex !important;
-                align-items: center !important;
-                box-sizing: border-box !important;
-            }
+        /* 2. 核心：調整控制框的高度與內距 */
+        .ts-control {
+            min-height: 44px !important;
+            /* 對齊計算後的總高度 */
+            padding: 12px !important;
+            /* 套用您圖中的 Padding 12 */
+            border: 0.667px solid #d0d0d0 !important;
+            /* 套用您圖中的 Border 寬度 */
+            display: flex !important;
+            align-items: center !important;
+            box-sizing: border-box !important;
+        }
 
-            /* 3. 調整內部輸入文字的高度 */
-            .ts-control input {
-                height: 18.667px !important; /* 套用您圖中的內容高度 */
-                line-height: 18.667px !important;
-                font-size: 16px !important; /* 視需求微調字體大小 */
-                margin: 0 !important;
-            }
+        /* 3. 調整內部輸入文字的高度 */
+        .ts-control input {
+            height: 18.667px !important;
+            /* 套用您圖中的內容高度 */
+            line-height: 18.667px !important;
+            font-size: 16px !important;
+            /* 視需求微調字體大小 */
+            margin: 0 !important;
+        }
 
-            /* 4. 針對單選模式下的顯示文字位置微調 */
-            .ts-wrapper.single .ts-control .item {
-                line-height: 18.667px !important;
-            }
+        /* 4. 針對單選模式下的顯示文字位置微調 */
+        .ts-wrapper.single .ts-control .item {
+            line-height: 18.667px !important;
+        }
 
-            /* 放大控制框內的字體 */
-            .ts-control {
-                min-height: 44px !important;
-                padding: 12px !important;
-                font-size: 16px !important; /* 加大字體，通常 16px-18px 在手機上較易閱讀 */
-            }
+        /* 放大控制框內的字體 */
+        .ts-control {
+            min-height: 44px !important;
+            padding: 12px !important;
+            font-size: 16px !important;
+            /* 加大字體，通常 16px-18px 在手機上較易閱讀 */
+        }
 
-            /* 確保選中的項目垂直置中且字體正確 */
-            .ts-wrapper.single .ts-control .item {
-                font-size: 16px !important;
-                line-height: 20px !important; /* 配合字體大小稍微增加行高 */
-            }
+        /* 確保選中的項目垂直置中且字體正確 */
+        .ts-wrapper.single .ts-control .item {
+            font-size: 16px !important;
+            line-height: 20px !important;
+            /* 配合字體大小稍微增加行高 */
+        }
 
-            /* 下拉選單內的選項字體也同步加大 */
-            .ts-dropdown .option {
-                font-size: 16px !important;
-                padding: 12px !important;
-            }
+        /* 下拉選單內的選項字體也同步加大 */
+        .ts-dropdown .option {
+            font-size: 16px !important;
+            padding: 12px !important;
+        }
