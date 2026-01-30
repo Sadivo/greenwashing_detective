@@ -13,11 +13,16 @@
 以下為專案主要檔案與功能對照：
 
 * **資料庫服務：** `db_service.py` (pymysql)
-* **主程式入口：** `app.py` (flask)
+* **主程式入口：**
+    * `app.py` (Flask)
+    * `app_line.py` (Line Bot)
 * **AI 介面：**
     * `gemini_api.py` (Gemini)
+    * `run_prompt2_gemini.py` (Gemini)
     * `pplx_api.py` (Perplexity)
-* **爬蟲程式：** `crawler_esgReport`
+* **爬蟲程式：**
+    * `crawler_esgReport` (永續報告書爬蟲)
+    * `crawler_news.py` (新聞爬蟲)
 * **前端網頁：**
     * **HTML:** `/templates/index.html`
     * **CSS:** `/static/css/style.css`
