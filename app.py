@@ -66,15 +66,34 @@ def is_actively_processing(esg_id):
 
 # --- 資料庫連線設定 ---
 def get_db_connection():
-    return pymysql.connect(
-        host=os.getenv('DB_HOST'),
-        port=int(os.getenv('DB_PORT')),
-        user=os.getenv('DB_USER'), 
-        password=os.getenv('DB_PASSWORD'), 
-        db=os.getenv('DB_NAME'), 
-        charset='utf8mb4',
-        cursorclass=DictCursor
-    )
+    # 檢查是否有設定 Cloud SQL 連線名稱 (這是判斷是否在雲端的關鍵)
+    connection_name = os.getenv('INSTANCE_CONNECTION_NAME')
+
+    if connection_name:
+            # === Cloud Run 環境 (使用 Unix Socket) ===
+            # Cloud Run 的 Cloud SQL 整合預設將 socket 放在 /cloudsql/ 下
+            unix_socket = f"/cloudsql/{connection_name}"
+            print(f"🔗 嘗試透過 Unix Socket 連線: {unix_socket}")
+            return pymysql.connect(
+                unix_socket=unix_socket,
+                user=os.getenv('DB_USER'), 
+                password=os.getenv('DB_PASSWORD'), 
+                db=os.getenv('DB_NAME'), 
+                charset='utf8mb4',
+                cursorclass=DictCursor
+            )
+    else:
+        # === 本機開發環境 (使用 TCP Host/Port) ===
+        print("🔗 嘗試透過 TCP 連線 (Local)")
+        return pymysql.connect(
+            host=os.getenv('DB_HOST', '127.0.0.1'),
+            port=int(os.getenv('DB_PORT', 3306)), # 加上預設值 3306 避免崩潰
+            user=os.getenv('DB_USER'), 
+            password=os.getenv('DB_PASSWORD'), 
+            db=os.getenv('DB_NAME'), 
+            charset='utf8mb4',
+            cursorclass=DictCursor
+        )
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'

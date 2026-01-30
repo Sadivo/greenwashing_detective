@@ -21,6 +21,17 @@ import os
 # 取得此 config.py 檔案所在的目錄作為專案根目錄
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
+# 偵測是否在 Cloud Run 環境 (GCP 會自動注入 K_SERVICE 環境變數)
+IS_CLOUD_RUN = os.getenv('K_SERVICE') is not None
+
+# === 路徑設定 ===
+if IS_CLOUD_RUN:
+    # 雲端環境：使用 GCS 掛載路徑
+    # 注意：之後在 Cloud Run 網頁設定時，我們要將 Bucket 掛載到這個路徑
+    DATA_ROOT = "/mnt/gcs_data"
+else:
+    # 本機環境：維持原樣
+    DATA_ROOT = os.path.join(PROJECT_ROOT, 'temp_data')
 
 # === 目錄路徑配置 ===
 PATHS = {
@@ -31,18 +42,19 @@ PATHS = {
     'STATIC_DICT': os.path.join(PROJECT_ROOT, 'static', 'data', 'dict'),
     
     # 暫存資料目錄
-    'TEMP_DATA': os.path.join(PROJECT_ROOT, 'temp_data'),
-    'ESG_REPORTS': os.path.join(PROJECT_ROOT, 'temp_data', 'esgReport'),
-    'P1_JSON': os.path.join(PROJECT_ROOT, 'temp_data', 'prompt1_json'),
-    'P2_JSON': os.path.join(PROJECT_ROOT, 'temp_data', 'prompt2_json'),
-    'P3_JSON': os.path.join(PROJECT_ROOT, 'temp_data', 'prompt3_json'),
-    'NEWS_OUTPUT': os.path.join(PROJECT_ROOT, 'temp_data', 'news_output'),
+    # 動態產出的檔案改用 DATA_ROOT
+    'TEMP_DATA': os.path.join(DATA_ROOT, 'temp_data'),
+    'ESG_REPORTS': os.path.join(DATA_ROOT, 'esgReport'),
+    'P1_JSON': os.path.join(DATA_ROOT, 'prompt1_json'),
+    'P2_JSON': os.path.join(DATA_ROOT, 'prompt2_json'),
+    'P3_JSON': os.path.join(DATA_ROOT, 'prompt3_json'),
+    'NEWS_OUTPUT': os.path.join(DATA_ROOT, 'news_output'),
     
     # 新聞搜尋相關（統一存放於 temp_data/news_output）
-    'NEWS_SEARCH_OUTPUT': os.path.join(PROJECT_ROOT, 'temp_data', 'news_output'),
+    'NEWS_SEARCH_OUTPUT': os.path.join(DATA_ROOT, 'news_output'),
     
     # Word Cloud 輸出（統一存放於 static/data/wc_output）
-    'WORD_CLOUD_OUTPUT': os.path.join(PROJECT_ROOT, 'static','data', 'wc_output'),
+    'WORD_CLOUD_OUTPUT': os.path.join(DATA_ROOT, 'wc_output'),
     
     # Src 目錄（核心程式碼模組）
     'SRC_DIR': os.path.join(PROJECT_ROOT, 'src'),
@@ -135,9 +147,13 @@ def ensure_directories():
         from config import ensure_directories
         ensure_directories()
     """
-    for dir_path in PATHS.values():
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path, exist_ok=True)
+    if not IS_CLOUD_RUN:
+        for dir_path in PATHS.values():
+            if not os.path.exists(dir_path):
+                try:
+                    os.makedirs(dir_path, exist_ok=True)
+                except Exception:
+                    pass
 
 
 # === 自動建立目錄（可選） ===
