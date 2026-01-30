@@ -228,6 +228,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 4. (選擇性) 如果想要一進來就顯示列表，可以打開下面這行
     // renderCompanies(companiesData);
+
+    // ========================================================
+    // 🆕 新增: URL 參數自動搜尋 (供 Line Bot 連結使用)
+    // 格式: /?year=2024&code=2330
+    // ========================================================
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlYear = urlParams.get('year');
+    const urlCode = urlParams.get('code');
+
+    if (urlYear && urlCode) {
+        console.log(`[URL 參數] 偵測到自動搜尋: year=${urlYear}, code=${urlCode}`);
+
+        // 設定年度下拉選單
+        const yearFilter = document.getElementById('yearFilter');
+        if (yearFilter) {
+            yearFilter.value = urlYear;
+        }
+
+        // 設定公司代碼 (TomSelect)
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput && searchInput.tomselect) {
+            searchInput.tomselect.setValue(urlCode);
+        } else if (searchInput) {
+            searchInput.value = urlCode;
+        }
+
+        // 延遲觸發搜尋，確保 TomSelect 已完成初始化
+        setTimeout(() => {
+            handleSearch();
+        }, 300);
+    }
 });
 
 // --- 第一部分：資料搜尋與篩選 (Search & Filter) ---
