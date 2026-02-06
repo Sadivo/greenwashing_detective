@@ -118,22 +118,20 @@ graph TB
 ## 雲端部署 (Quick Start for Techies)
 本專案已完整遷移至 Google Cloud Platform (GCP)，採用容器化架構，確保環境一致性：
 
-環境變數設定：參考 .env.example 準備好你的 API_KEY 與資料庫連線資訊。
+**環境變數設定**：參考 .env.example 準備好你的 API_KEY 與資料庫連線資訊。
 
-建立 Docker 映像檔：我們使用 Artifact Registry 來存放映像檔。
+**建立 Docker 映像檔**：我們使用 Artifact Registry 來存放映像檔。
 
 雲端基礎建設：
-- 運算：使用 Cloud Run 部署 Flask App，因為涉及大檔案傳輸，建議配置至少 2GiB 記憶體。
-- 資料庫：使用 Cloud SQL (MySQL) 儲存分析結果。
-- 儲存：使用 Cloud Storage (GCS) 來存放下載的 PDF 報告與生成的 JSON 暫存檔。
-- 部署：透過 GCP 的第二代執行環境掛載 GCS，並利用 Cloud SQL Connector 確保連線安全。
+- **運算**：使用 Cloud Run 部署 Flask App，因為涉及大檔案傳輸，建議配置至少 2GiB 記憶體。
+- **資料庫**：使用 Cloud SQL (MySQL) 儲存分析結果。
+- **儲存**：使用 Cloud Storage (GCS) 來存放下載的 PDF 報告與生成的 JSON 暫存檔。
+- **部署**：透過 GCP 的第二代執行環境掛載 GCS，並利用 Cloud SQL Connector 確保連線安全。
 
 ---
 
 ## 未來優化方向 (Roadmap)
 雖然系統已經跑得很穩，但身為開發者，我們還有更多想玩的：
-
-- 非同步任務佇列 (Celery + Redis)： 目前雖然有多執行緒，但使用者還是得開著網頁，並且原本的分析任務會占用大量記憶體。未來計畫引入 Celery，讓分析任務在後台跑，分析好了再透過通知跟使用者說。
 
 - 更多元的資料來源： 整合「環保署處分紀錄」與「勞基法違規」等政府 Open Data，讓 AI 不只看新聞，還能查企業的違規「黑歷史」。
 
