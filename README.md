@@ -15,8 +15,6 @@
 ---
 
 ## 成果展示 (介面截圖)
-* **專案網頁：**[ESG綠色洗白風險儀表板](https://esg-app-546777032880.asia-northeast1.run.app/)
-
 * **視覺化儀表板：** 一眼看出這家公司的 ESG 風險等級。
 > ![Dashboard 風險標籤示意圖](static/images/dashboard.png)
 
