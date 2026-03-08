@@ -26,6 +26,6 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 8080
 
 # 啟動指令：使用 gunicorn 執行 app:app
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--threads", "8", "--timeout", "0", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "--threads", "8", "--timeout", "0", "app:app"]
 # 格式：gcloud builds submit --tag gcr.io/[專案ID]/[映像檔名稱]
 # gcloud builds submit --tag gcr.io/greenwash-485301/esg-app:test
